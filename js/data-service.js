@@ -364,7 +364,7 @@
       if (!record.rollNumber && !record.studentName) continue;
 
       var match = this.matchSubmissionToRoster(record);
-      if (trustedSelection && this.isScopedIdentifierAssociation(items[i], trustedSelection, match)) {
+      if (trustedSelection && trustedSelection.isOfficialRoster !== false && this.isScopedIdentifierAssociation(items[i], trustedSelection, match)) {
         match = { status: 'MATCHED', student: this.studentsMap[trustedSelection.id], rule: 'VERIFIED_IDENTIFIER', reason: 'Server validated the recorded university identifier; credential omitted from public response.' };
       }
 
@@ -423,9 +423,18 @@
           };
         }
         var unStudent = this.unmatchedStudentsMap[unKey];
-        unStudent.allSubmissions.push(record);
-        if (!unStudent.submissionsBySlot[record.challengeId]) unStudent.submissionsBySlot[record.challengeId] = [];
-        unStudent.submissionsBySlot[record.challengeId].push(record);
+        if (match.retrievalBlockedReason) {
+          if (!unStudent.excludedSubmissions) unStudent.excludedSubmissions = [];
+          unStudent.excludedSubmissions.push({
+            submissionId: record.submissionId,
+            challengeId: record.challengeId,
+            reason: match.retrievalBlockedReason
+          });
+        } else {
+          unStudent.allSubmissions.push(record);
+          if (!unStudent.submissionsBySlot[record.challengeId]) unStudent.submissionsBySlot[record.challengeId] = [];
+          unStudent.submissionsBySlot[record.challengeId].push(record);
+        }
       }
     }
 
@@ -688,7 +697,7 @@
   DataService.prototype.getUnlistedStudents = function () {
     var entries = Object.keys(this.unmatchedStudentsMap).map(function (id) {
       var st = this.unmatchedStudentsMap[id];
-      return Object.assign({}, st, { submissionCount: Object.keys(st.submissionsBySlot).length });
+      return Object.assign({}, st, { submissionCount: st && st.submissionsBySlot ? Object.keys(st.submissionsBySlot).length : ((st && st.submissionCount) || 0) });
     }, this);
     (this.unlistedDirectory || []).forEach(function (st) {
       if (!entries.some(function (e) { return e.id === st.id; })) entries.push(st);
@@ -696,7 +705,11 @@
     return entries.sort(function (a, b) { return a.studentName.localeCompare(b.studentName) || a.id.localeCompare(b.id); });
   };
 
-  DataService.prototype.discoverUnlistedStudents = function (callback) {
+  DataService.prototype.discoverUnlistedStudents = function (callback, forceRefresh) {
+    if (!forceRefresh && this.unlistedDirectory && this.unlistedDirectory.length > 0) {
+      if (callback) callback(null, this.getUnlistedStudents());
+      return;
+    }
     var self = this, check = this.validateEndpointUrl(this.configuredEndpoint || this.defaultEndpoint);
     if (!check.valid) return callback(new Error('Configure the student report service endpoint.'));
     function done(err, res) {
@@ -862,7 +875,8 @@
       assignmentSlots: assignmentSlots,
       submittedCount: indexRows.filter(function (r) { return r.isSubmitted; }).length,
       missingCount: indexRows.filter(function (r) { return !r.isSubmitted; }).length,
-      lateCount: indexRows.filter(function (r) { return r.isLate === true; }).length
+      lateCount: indexRows.filter(function (r) { return r.isLate === true; }).length,
+      excludedSubmissions: student.excludedSubmissions || []
     };
   };
 
@@ -1446,7 +1460,7 @@
         var selected = self.studentsMap[authId];
         if (!selected || selected.isOfficialRoster === false ||
             PortfolioIdentity.norm(data.student.studentName) !== PortfolioIdentity.norm(selected.studentName) ||
-            PortfolioIdentity.norm(data.student.rollNumber) !== PortfolioIdentity.norm(selected.rollNumber) ||
+            PortfolioIdentity.normRoll(data.student.rollNumber) !== PortfolioIdentity.normRoll(selected.rollNumber) ||
             PortfolioIdentity.division(data.student.division) !== PortfolioIdentity.division(selected.division)) {
           throw new Error('Credential response does not match the approved local roster. Refresh the approved roster before retrying.');
         }
@@ -1552,10 +1566,15 @@
    */
   DataService.prototype.isScopedIdentifierAssociation = function (raw, selected, localMatch) {
     var binding = raw.portfolioIdentity || {}, ident = PortfolioIdentity.identity(raw);
-    return selected && selected.isOfficialRoster !== false && binding.studentId === selected.id &&
-      binding.rule === 'VERIFIED_IDENTIFIER' && !localMatch.student && !localMatch.retrievalBlockedReason &&
-      (!ident.rollNumber || PortfolioIdentity.norm(ident.rollNumber) === PortfolioIdentity.norm(selected.rollNumber)) &&
-      (!ident.division || PortfolioIdentity.division(ident.division) === PortfolioIdentity.division(selected.division));
+    if (!selected) return false;
+    if (selected.isOfficialRoster !== false) {
+      return binding.studentId === selected.id && binding.rule === 'VERIFIED_IDENTIFIER' && !localMatch.student && !localMatch.retrievalBlockedReason &&
+        (!ident.rollNumber || PortfolioIdentity.normRoll(ident.rollNumber) === PortfolioIdentity.normRoll(selected.rollNumber)) &&
+        (!ident.division || PortfolioIdentity.division(ident.division) === PortfolioIdentity.division(selected.division));
+    }
+    var sName = PortfolioIdentity.norm(selected.studentName).toLowerCase();
+    var rName = PortfolioIdentity.norm(ident.studentName).toLowerCase();
+    return !localMatch.student && sName === rName && (!binding.studentId || binding.studentId === selected.id);
   };
 
   DataService.prototype.fetchStudentPortfolio = function (studentIdentifier, callback) {
@@ -1668,13 +1687,28 @@
             if (raw.portfolioIdentity && raw.portfolioIdentity.studentId !== cleanId) throw new Error('Response rejected: conflicting server association.');
             var match = PortfolioIdentity.resolve(raw, self.activeRoster, OfficialRoster);
             var expected = match.student ? match.student.id : PortfolioIdentity.key(raw);
-            if (expected !== cleanId && !(data.identityPolicy === 'exact-v1' && self.isScopedIdentifierAssociation(raw, resolvedStudent, match))) throw new Error('Response rejected: submission belongs to a different or ambiguous identity.');
+            if (expected !== cleanId && !(data.identityPolicy === 'exact-v1' && self.isScopedIdentifierAssociation(raw, resolvedStudent, match))) {
+              if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[DataService] Identity mismatch on submission:', {
+                  cleanId: cleanId,
+                  expected: expected,
+                  rawIdentity: PortfolioIdentity.identity(raw),
+                  portfolioIdentity: raw.portfolioIdentity,
+                  matchStatus: match.status
+                });
+              }
+              throw new Error('Response rejected: submission belongs to a different or ambiguous identity.');
+            }
           });
           var allowedSubmissionIds = data.submissions.map(function (raw) { return self.parseSubmissionRecord(raw).submissionId; });
           var safeEvaluations = (data.evaluations || []).filter(function (ev) {
             return ev.submissionId && allowedSubmissionIds.indexOf(ev.submissionId) !== -1;
           });
           self.loadSubmissionsArray(data.submissions, safeEvaluations, data.identityPolicy === 'exact-v1' ? resolvedStudent : null);
+          if (data.excludedSubmissions && Array.isArray(data.excludedSubmissions)) {
+            resolvedStudent.excludedSubmissions = data.excludedSubmissions;
+            if (self.unmatchedStudentsMap[cleanId]) self.unmatchedStudentsMap[cleanId].excludedSubmissions = data.excludedSubmissions;
+          }
           self.submissionsSource = 'LIVE_GOOGLE_SHEETS';
           self.isSubmissionsLive = true;
           self.activeUserRole = 'STUDENT';
@@ -1700,13 +1734,27 @@
         return;
       }
 
+      var timeoutMs = this.requestTimeoutMs || 35000;
+      var timerId = null;
+      var aborted = false;
+
       if (typeof fetch === 'function') {
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        if (controller) {
+          timerId = setTimeout(function () {
+            aborted = true;
+            controller.abort();
+          }, timeoutMs);
+        }
+
         fetch(urlCheck.url, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: postData
+          body: postData,
+          signal: controller ? controller.signal : undefined
         })
         .then(function (response) {
+          if (timerId) clearTimeout(timerId);
           return response.text().then(function (text) {
             handleRemoteReportResponse(null, {
               status: response.status,
@@ -1716,7 +1764,12 @@
           });
         })
         .catch(function (fetchErr) {
-          handleRemoteReportResponse(fetchErr, null);
+          if (timerId) clearTimeout(timerId);
+          if (aborted || (fetchErr && fetchErr.name === 'AbortError')) {
+            handleRemoteReportResponse(new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's. The student report service took too long to respond. Please check your network connection and click Generate Portfolio to retry.'), null);
+          } else {
+            handleRemoteReportResponse(fetchErr, null);
+          }
         });
         return;
       }

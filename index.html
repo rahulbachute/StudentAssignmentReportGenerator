@@ -387,11 +387,11 @@
 
   <!-- Load Independent Frontend Scripts -->
   <script src="js/vendor/xlsx.full.min.js"></script>
-  <script src="js/assignment-registry.js"></script>
-  <script src="js/official-roster.js"></script>
-  <script src="js/identity-policy.js"></script>
-  <script src="js/data-service.js"></script>
-  <script src="js/report-renderer.js"></script>
+  <script src="js/assignment-registry.js?v=2.3"></script>
+  <script src="js/official-roster.js?v=2.3"></script>
+  <script src="js/identity-policy.js?v=2.3"></script>
+  <script src="js/data-service.js?v=2.3"></script>
+  <script src="js/report-renderer.js?v=2.3"></script>
 
   <!-- App Controller Script -->
   <script>
@@ -1115,6 +1115,8 @@
       if (studentDivisionSelect) {
         studentDivisionSelect.addEventListener('change', function() {
           portfolioRequest++;
+          clearGenerationTimer();
+          setPortfolioLoadingState(false);
           var div = studentDivisionSelect.value;
           currentPackage = null;
           reportOutput.innerHTML = '';
@@ -1150,20 +1152,66 @@
         });
       }
 
+      var isGeneratingPortfolio = false;
+      var generationTimerId = null;
+      var generationStartTime = 0;
+
+      function setPortfolioLoadingState(loading) {
+        isGeneratingPortfolio = loading;
+        if (btnGenerateStudentPortfolio) {
+          btnGenerateStudentPortfolio.disabled = loading;
+          if (loading) {
+            if (!btnGenerateStudentPortfolio.getAttribute('data-default-text')) {
+              btnGenerateStudentPortfolio.setAttribute('data-default-text', btnGenerateStudentPortfolio.textContent || 'Generate Student Portfolio');
+            }
+            btnGenerateStudentPortfolio.textContent = '⏳ Generating Portfolio…';
+          } else {
+            var defaultText = btnGenerateStudentPortfolio.getAttribute('data-default-text') || 'Generate Student Portfolio';
+            btnGenerateStudentPortfolio.textContent = defaultText;
+          }
+        }
+        if (studentNameSelect) studentNameSelect.disabled = loading;
+        if (studentDivisionSelect) studentDivisionSelect.disabled = loading;
+      }
+
+      function clearGenerationTimer() {
+        if (generationTimerId) {
+          clearInterval(generationTimerId);
+          generationTimerId = null;
+        }
+      }
+
       var portfolioRequest = 0;
       function generateStudentPortfolio() {
-        var requestNumber = ++portfolioRequest;
         var studentId = studentNameSelect.value;
         if (!studentId) {
           showNotice('Please select your name from the dropdown to generate your portfolio.', 'warning');
           return;
         }
 
+        // Prevent duplicate concurrent requests when clicking repeatedly
+        if (isGeneratingPortfolio) {
+          return;
+        }
+
+        var requestNumber = ++portfolioRequest;
         currentPackage = null;
         reportOutput.innerHTML = '';
-        showNotice('Generating portfolio for selected student...', 'info');
+
+        setPortfolioLoadingState(true);
+        clearGenerationTimer();
+        generationStartTime = Date.now();
+        showNotice('Generating portfolio for selected student... (0s elapsed)', 'info');
+
+        generationTimerId = setInterval(function () {
+          var elapsedSec = Math.floor((Date.now() - generationStartTime) / 1000);
+          showNotice('Generating portfolio for selected student... (' + elapsedSec + 's elapsed)', 'info');
+        }, 1000);
 
         dataService.fetchStudentPortfolio(studentId, function(err, pkg, student) {
+          clearGenerationTimer();
+          setPortfolioLoadingState(false);
+
           if (requestNumber !== portfolioRequest || studentNameSelect.value !== studentId) return;
           if (err) {
             showNotice(err.message, 'danger');
@@ -1186,7 +1234,8 @@
           }
 
           renderActiveView();
-          showNotice('Generated ' + (student.isOfficialRoster === false ? 'unlisted student portfolio — attendance match unconfirmed (' : 'official portfolio (') + pkg.totalPages + ' pages) for ' + student.studentName + ' (Roll: ' + student.rollNumber + ', Div: ' + student.division + '). Ready for physical A4 printing or PDF export.', 'success');
+          var elapsedTotal = ((Date.now() - generationStartTime) / 1000).toFixed(1);
+          showNotice('Generated ' + (student.isOfficialRoster === false ? 'unlisted student portfolio — attendance match unconfirmed (' : 'official portfolio (') + pkg.totalPages + ' pages) for ' + student.studentName + ' (Roll: ' + student.rollNumber + ', Div: ' + student.division + ') in ' + elapsedTotal + 's. Ready for physical A4 printing or PDF export.', 'success');
         });
       }
 
@@ -1197,6 +1246,8 @@
       if (btnResetStudentSelection) {
         btnResetStudentSelection.addEventListener('click', function() {
           portfolioRequest++;
+          clearGenerationTimer();
+          setPortfolioLoadingState(false);
           if (studentDivisionSelect) studentDivisionSelect.value = '';
           populateStudentNames('');
           if (studentStatsStrip) studentStatsStrip.style.display = 'none';
