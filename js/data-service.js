@@ -883,43 +883,67 @@
   /**
    * Estimates the visual layout weight of an activity row for pagination.
    */
+  /**
+   * Identifies whether an activity component requires faculty evaluation.
+   */
+  DataService.isFacultyEvaluatedComponent = function (act) {
+    if (!act) return false;
+    var comp = (act.component || '').toLowerCase();
+    var facultyComps = ['reflection', 'recommendation', 'engineering-decision-canvas', 'decision'];
+    if (facultyComps.some(function (c) { return comp === c || comp.includes(c); })) {
+      return true;
+    }
+    var title = (act.title || act.name || '').toLowerCase();
+    return /^(reflection|recommendation|engineering notebook|technical report|decision|redesign trade-off)/i.test(title);
+  };
+
+  /**
+   * Estimates the visual layout weight of an activity row for pagination.
+   * Based on the compact representation actually rendered rather than raw payload length.
+   */
   DataService.estimateActivityWeight = function (act) {
     var weight = 1.0;
     if (!act) return weight;
     var resp = act.response;
     if (!resp) return weight;
 
-    var comp = act.component || '';
+    var comp = (act.component || '').toLowerCase();
     if (comp === 'information-card' || comp === 'project-charter') {
-      return 0.5;
+      return 0.35;
     }
     if (comp.includes('image-label') || comp.includes('component-identification') || comp.includes('label')) {
-      return 0.8;
+      return 0.6;
     }
     if (comp.includes('text-mcq') || comp.includes('mcq')) {
-      return 0.8;
+      return 0.6;
     }
-    if (comp.includes('calculation') || comp.includes('inputs')) {
-      return 0.9;
+    if (comp.includes('guided-workflow') || comp.includes('workflow')) {
+      return 0.5;
+    }
+    if (comp.includes('calculation') || comp.includes('inputs') || comp.includes('load-path')) {
+      return 0.7;
+    }
+    if (comp.includes('selection')) {
+      return 0.7;
     }
 
-    // Faculty-assessed answers or text fields: weight based on actual text length
+    // Faculty-assessed answers: weight based on actual narrative text length
     var textLen = 0;
     if (typeof resp === 'string') {
       textLen = resp.length;
     } else if (typeof resp === 'object') {
       var keys = Object.keys(resp).filter(function (k) {
-        return !['startedAt', 'updatedAt', 'activityType', 'activityId', 'attemptNumber', 'timeTakenSeconds'].includes(k);
+        return !['startedAt', 'updatedAt', 'activityType', 'activityId', 'attemptNumber', 'timeTakenSeconds', 'validation'].includes(k);
       });
       keys.forEach(function (k) {
         if (resp[k]) textLen += String(resp[k]).length;
       });
     }
 
-    var weight = 1.0;
-    if (textLen > 1200) weight += 3.0;
-    else if (textLen > 600) weight += 2.0;
-    else if (textLen > 250) weight += 1.0;
+    if (textLen > 3000) weight += 4.5;
+    else if (textLen > 1800) weight += 3.0;
+    else if (textLen > 1000) weight += 2.0;
+    else if (textLen > 400) weight += 1.0;
     else if (textLen > 100) weight += 0.5;
 
     return weight;
@@ -928,7 +952,7 @@
   /**
    * Partitions an assignment's activities into discrete printable pages.
    * Ensures Page 1 (with title and student profile) and continuation pages
-   * flow cleanly without clipping or cramped text.
+   * flow cleanly without clipping, arbitrary item limits, or artificial continuation pages.
    */
   DataService.partitionActivities = function (activities) {
     if (!activities || activities.length === 0) {
@@ -937,13 +961,21 @@
 
     var expanded = [];
     activities.forEach(function (act) {
+      // Prevent automatically evaluated components from generating artificial continuation pages.
+      // Only genuinely long narrative string responses from faculty-evaluated components are chunked.
+      var isFaculty = DataService.isFacultyEvaluatedComponent(act);
       var response = act.response;
-      var text = typeof response === 'string' ? response : JSON.stringify(response);
-      if (!text || (text.length <= 1400 && text.split('\n').length <= 20)) { expanded.push(act); return; }
-      // Original responses stay untouched; generic continuation rows preserve
-      // long strings and serialize nested values without summary-only rendering.
+      var text = (typeof response === 'string') ? response : '';
+      if (!isFaculty || !text || (text.length <= 1400 && text.split('\n').length <= 20)) {
+        expanded.push(act);
+        return;
+      }
+
+      // Preserve verbatim faculty responses across continuation pages
       var chunks = [], points = Array.from(text);
-      for (var offset = 0; offset < points.length; offset += 900) chunks.push(points.slice(offset, offset + 900).join(''));
+      for (var offset = 0; offset < points.length; offset += 900) {
+        chunks.push(points.slice(offset, offset + 900).join(''));
+      }
       var bounded = [];
       chunks.forEach(function (chunk) {
         var lines = chunk.split('\n'), part = '';
@@ -954,27 +986,34 @@
         if (part) bounded.push(part);
       });
       bounded.forEach(function (chunk, index) {
-        expanded.push(Object.assign({}, act, { component: 'portfolio-continuation',
+        expanded.push(Object.assign({}, act, {
+          component: 'portfolio-continuation',
           title: (act.title || act.name || 'Response') + ' (part ' + (index + 1) + '/' + bounded.length + ')',
-          response: { reflection: chunk }, _portfolioContinuation: true }));
+          response: { reflection: chunk },
+          _portfolioContinuation: true
+        }));
       });
     });
+
     if (expanded.some(function (act) { return act._portfolioContinuation; })) {
       var result = [], batch = [];
       expanded.forEach(function (act) {
         if (act._portfolioContinuation) {
           if (batch.length) { result = result.concat(DataService.partitionActivities(batch)); batch = []; }
           result.push([act]);
-        } else batch.push(act);
+        } else {
+          batch.push(act);
+        }
       });
       if (batch.length) result = result.concat(DataService.partitionActivities(batch));
       return result;
     }
+
     var weights = activities.map(DataService.estimateActivityWeight);
     var totalWeight = weights.reduce(function (sum, w) { return sum + w; }, 0);
 
-    // Single page threshold: if total weight <= 11.0 and acts <= 9, fits cleanly on 1 page!
-    if (activities.length <= 9 && totalWeight <= 11.0) {
+    // Single page threshold: if total weight <= 9.5 and acts <= 10, fits cleanly on 1 page!
+    if (activities.length <= 10 && totalWeight <= 9.5) {
       return [activities];
     }
 
@@ -986,9 +1025,10 @@
     for (var i = 0; i < activities.length; i++) {
       var act = activities[i];
       var w = weights[i];
-      // First page max weight ~11.0 (or max 7 items); continuation max ~14.0 (or max 8 items)
-      var maxWeight = isFirstPage ? 11.0 : 14.0;
-      var maxCount = isFirstPage ? 7 : 8;
+      // First page max weight ~9.0 (fits header, student profile, summary, table rows and sign-off)
+      // Continuation page max weight ~13.0 (repeated table header, more vertical space)
+      var maxWeight = isFirstPage ? 9.0 : 13.0;
+      var maxCount = isFirstPage ? 8 : 12;
 
       if (currentBatch.length > 0 && (currentBatchWeight + w > maxWeight || currentBatch.length >= maxCount)) {
         pages.push(currentBatch);
@@ -1005,12 +1045,17 @@
       pages.push(currentBatch);
     }
 
-    // Rebalance if the last page has only 1 item and previous page has >= 4 items
+    // Rebalance if the last page has only 1 item and previous page can fit it
     if (pages.length > 1) {
       var lastPage = pages[pages.length - 1];
       var prevPage = pages[pages.length - 2];
       if (lastPage.length === 1 && prevPage.length >= 4) {
-        lastPage.unshift(prevPage.pop());
+        var lastWeight = DataService.estimateActivityWeight(lastPage[0]);
+        var prevWeight = prevPage.map(DataService.estimateActivityWeight).reduce(function (sum, w) { return sum + w; }, 0);
+        if (prevWeight + lastWeight <= 12.0) {
+          prevPage.push(lastPage.pop());
+          pages.pop();
+        }
       }
     }
 

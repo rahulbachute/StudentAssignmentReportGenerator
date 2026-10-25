@@ -42,20 +42,36 @@
     if (component === 'text-mcq') {
       var mcqOpt = '';
       var mcqText = '';
-      if (typeof resp === 'object' && !Array.isArray(resp)) {
-        if (resp.mcq) mcqOpt = String(resp.mcq);
-        if (resp.text) mcqText = String(resp.text);
-        else if (resp.answer) mcqText = String(resp.answer);
-        else if (resp.selected) mcqText = String(resp.selected);
-      } else {
-        mcqText = String(resp);
+      if (typeof resp === 'object' && !Array.isArray(resp) && resp !== null) {
+        if (resp.mcq) mcqOpt = String(resp.mcq).trim();
+        if (resp.text) mcqText = String(resp.text).trim();
+        else if (resp.answer) mcqText = String(resp.answer).trim();
+        else if (resp.selected) mcqText = String(resp.selected).trim();
+      } else if (resp !== null && resp !== undefined) {
+        mcqText = String(resp).trim();
       }
 
-      var cleanText = mcqText.replace(/\\\[|\\\]/g, '').replace(/\\\(|\\\)/g, '').replace(/\s+/g, ' ').trim();
-      if (mcqOpt) {
-        return `<div class="small"><span class="badge bg-light text-dark border me-1">${escapeHtml(mcqOpt.toUpperCase())}</span> <span class="text-dark">${escapeHtml(cleanText)}</span></div>`;
+      var cleanText = mcqText.replace(/\\\[|\\\]/g, '').replace(/\\\(|\\\)/g, '').replace(/\r?\n\s*\r?\n/g, '\n').trim();
+
+      // If mcqOpt is descriptive text itself (e.g. 'Traction Sheave', 'Preload')
+      if (mcqOpt && !/^(opt\d+|[a-e]\d+|[a-d])$/i.test(mcqOpt)) {
+        return `<div class="small"><span class="badge bg-light text-dark border me-1">Option</span> <strong class="text-dark">${escapeHtml(mcqOpt)}</strong></div>`;
       }
-      return `<div class="small text-dark">${escapeHtml(cleanText)}</div>`;
+
+      // If mcqOpt is an option code (like opt1, c1, A)
+      if (mcqOpt) {
+        var firstLine = cleanText.split('\n')[0].trim();
+        if (firstLine.length > 140) {
+          var match = firstLine.match(/^(.{30,135}?)(?:[\.\:\;]|\s\-\s|\s*\(Given|\s*Given)/);
+          if (match) firstLine = match[1].trim();
+          else firstLine = firstLine.slice(0, 137) + '...';
+        }
+        return `<div class="small"><span class="badge bg-light text-dark border me-1">${escapeHtml(mcqOpt.toUpperCase())}</span> <span class="text-dark">${escapeHtml(firstLine)}</span></div>`;
+      }
+
+      var concise = cleanText.split('\n')[0].trim();
+      if (concise.length > 140) concise = concise.slice(0, 137) + '...';
+      return `<div class="small text-dark">${escapeHtml(concise || 'Completed')}</div>`;
     }
 
     // B. Component identification / image-label: Display verified count and concise list of actual identified components
@@ -82,8 +98,31 @@
       return `<span class="badge bg-secondary-subtle text-secondary border">Charter Verified${spec}</span>`;
     }
 
-    // D. Calculations / Engineering Calculations: Show non-empty inputs, intermediate, results, and prominent FOS
-    if (component && (component.includes('calculation') || component.includes('inputs'))) {
+    // D. Guided Workflows: Concise completion status and essential engineering results
+    if (component && (component.includes('guided-workflow') || component.includes('workflow'))) {
+      if (typeof resp === 'object' && !Array.isArray(resp) && resp !== null) {
+        var wfKeys = Object.keys(resp).filter(function(k) {
+          var v = resp[k];
+          return v !== '' && v !== null && v !== undefined && !['startedAt', 'updatedAt', 'activityType', 'activityId', 'attemptNumber', 'timeTakenSeconds'].includes(k);
+        });
+        if (wfKeys.length === 0) {
+          return '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">Workflow Completed</span>';
+        }
+        var wfTokens = [];
+        wfKeys.slice(0, 4).forEach(function(k) {
+          var val = resp[k];
+          var displayVal = (typeof val === 'object' && val !== null && val.value !== undefined) ? val.value : val;
+          var label = k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ');
+          label = label.charAt(0).toUpperCase() + label.slice(1);
+          wfTokens.push(`<span class="response-kv"><strong class="text-dark">${escapeHtml(label)}:</strong> <code class="text-dark bg-light px-1 rounded border">${escapeHtml(String(displayVal))}</code></span>`);
+        });
+        return `<div class="small d-flex flex-wrap gap-1 align-items-center"><span class="badge bg-success-subtle text-success-emphasis border border-success-subtle me-1">Workflow Completed</span>${wfTokens.join(' ')}</div>`;
+      }
+      return '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">Workflow Completed</span>';
+    }
+
+    // E. Calculations / Engineering Calculations: Show non-empty inputs, intermediate, results, and prominent FOS
+    if (component && (component.includes('calculation') || component.includes('inputs') || component.includes('load-path'))) {
       if (typeof resp === 'object' && !Array.isArray(resp)) {
         var calcKeys = Object.keys(resp).filter(function(k) {
           var v = resp[k];
@@ -113,23 +152,32 @@
       }
     }
 
-    // E. Faculty-Assessed Responses (Reflection, Recommendation, Decision, Engineering Decision Canvas)
+    // F. Faculty-Assessed Responses (Reflection, Recommendation, Decision, Engineering Decision Canvas, Selection Justifications)
     // PRESERVE COMPLETE STUDENT ANSWER 100% UNCHANGED WITHOUT TRUNCATION OR PARAPHRASING
     if (typeof resp === 'object' && !Array.isArray(resp)) {
       var allKeys = Object.keys(resp).filter(function(k) {
-        return !['startedAt', 'updatedAt', 'activityType', 'activityId', 'attemptNumber', 'timeTakenSeconds'].includes(k);
+        return !['startedAt', 'updatedAt', 'activityType', 'activityId', 'attemptNumber', 'timeTakenSeconds', 'validation'].includes(k);
       });
 
       var decisionHtml = '';
       var textParts = [];
 
+      // Check if selection-cards has a selected material or component
+      if (component && (component.includes('selection') || component === 'selection-cards')) {
+        var selItem = resp.selection || resp.selected || resp.material || resp.choice || '';
+        if (selItem) {
+          decisionHtml = `<div class="mb-1"><span class="badge bg-primary-subtle text-primary border fw-bold">${escapeHtml(String(selItem))}</span></div>`;
+        }
+      }
+
       allKeys.forEach(function(k) {
         var v = resp[k];
         if (v === '' || v === null || v === undefined) return;
+        if (k === 'selection' || k === 'selected' || k === 'material' || k === 'choice') return;
         var vStr = (typeof v === 'object') ? JSON.stringify(v) : String(v);
 
         if (k === 'decision' || k === 'verdict') {
-          decisionHtml = `<div class="mb-1"><span class="badge bg-primary-subtle text-primary border fw-bold">${escapeHtml(vStr)}</span></div>`;
+          decisionHtml += `<div class="mb-1"><span class="badge bg-primary-subtle text-primary border fw-bold">${escapeHtml(vStr)}</span></div>`;
         } else if (/^(r\d+|q\d+|reflection|justification|recommendation|recommendations|summary|report|reasoning)$/i.test(k)) {
           var prefix = (allKeys.length > 2 && /^(r\d+|q\d+)$/i.test(k)) ? `<strong class="text-dark">[${k.toUpperCase()}]: </strong>` : '';
           textParts.push(`<div>${prefix}${escapeHtml(vStr)}</div>`);
@@ -848,6 +896,7 @@
 
   return {
     escapeHtml: escapeHtml,
+    formatResponseValue: formatResponseValue,
     partitionActivities: partitionActivities,
     renderIndexPage: renderIndexPage,
     renderSubmittedSlot: renderSubmittedSlot,
