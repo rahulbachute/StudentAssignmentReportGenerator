@@ -1,0 +1,31 @@
+# Backend source files (deployed separately to Google Apps Script editor)
+backend/
+
+# Test suites, test runners, and test fixtures
+test/
+
+# Internal reconciliation data, discrepancy registers, and historical audit logs
+reconciliation/
+sample-data/
+authoritative_identity_mapping_register.csv
+IMPLEMENTATION_REPORT.md
+REGRESSION_TRIAGE.md
+
+# Backup files, scratch files, and archives
+*.bak
+*.zip
+*.log
+scratch/
+tmp/
+temp/
+
+# CSV and local data exports
+*.csv
+test-results*.json
+
+# Operating System and IDE artefacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+node_modules/

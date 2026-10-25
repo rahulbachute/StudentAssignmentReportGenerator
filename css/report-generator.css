@@ -1,0 +1,931 @@
+/**
+ * Standalone Student Assignment Report Generator
+ * File: css/report-generator.css
+ * 
+ * Screen styles & exact MEILP report styling with strict A4 print formatting.
+ */
+
+:root {
+  --primary-color: #0b2e59;
+  --secondary-color: #0284c7;
+  --accent-color: #eab308;
+  --bg-light: #f8fafc;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --text-dark: #0f172a;
+  --text-muted: #64748b;
+  --text-secondary: #475569;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f1f5f9;
+  color: var(--text-dark);
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+/* ============================================================================
+   SCREEN APPLICATION INTERFACE
+   ========================================================================== */
+
+.app-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+.app-header {
+  background: linear-gradient(135deg, #0b2e59 0%, #1e3a8a 100%);
+  color: #ffffff;
+  padding: 20px 28px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(11, 46, 89, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.app-title-group h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.app-subtitle {
+  font-size: 12.5px;
+  color: #93c5fd;
+  margin: 0;
+}
+
+.app-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: #0f172a;
+  border: none;
+  font-weight: 700;
+  padding: 9px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.btn-primary:hover {
+  background: #ca8a04;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: var(--primary-color);
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* Control Panel */
+.control-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.control-tabs {
+  display: flex;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.form-control, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13.5px;
+  background: #ffffff;
+  color: var(--text-dark);
+}
+
+.form-control:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* Status Stats Strip */
+.stats-strip {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-box {
+  flex: 1;
+  min-width: 160px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.stat-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.stat-value.text-success { color: #16a34a; }
+.stat-value.text-warning { color: #d97706; }
+.stat-value.text-danger { color: #dc2626; }
+
+/* Notice Banner */
+.alert-banner {
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-info { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.alert-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.alert-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.badge-live { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.badge-fixture { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.badge-offline { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* Audit Inspector Table */
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.audit-table th {
+  background: #f1f5f9;
+  color: #334155;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid #cbd5e1;
+  font-weight: 600;
+}
+.audit-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+.audit-table tr:hover {
+  background: #f8fafc;
+}
+
+/* ============================================================================
+   EXACT MEILP MODAL / DOCUMENT STYLING
+   ========================================================================== */
+
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.report-page {
+  background: #ffffff;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm 14mm;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-corner-counter {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+/* MEILP Document Structure */
+.student-report-doc {
+  background: #ffffff;
+  padding: 18px 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-report-header {
+  border-bottom: 2px solid #0b2e59;
+  padding-bottom: 0.75rem;
+}
+
+.student-report-badge {
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.student-report-signoff {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  margin-top: auto;
+}
+
+/* Bootstrap-equivalent Utility Classes */
+.d-flex { display: flex; }
+.justify-content-between { justify-content: space-between; }
+.align-items-center { align-items: center; }
+.align-items-end { align-items: flex-end; }
+.flex-wrap { flex-wrap: wrap; }
+.text-center { text-align: center; }
+.text-start { text-align: left; }
+.text-end { text-align: right; }
+.d-block { display: block; }
+.d-inline-block { display: inline-block; }
+
+.text-dark { color: #0f172a !important; }
+.text-muted { color: #64748b !important; }
+.text-secondary { color: #475569 !important; }
+.text-primary { color: #0284c7 !important; }
+.text-success { color: #16a34a !important; }
+.text-warning { color: #d97706 !important; }
+.text-danger { color: #dc2626 !important; }
+.text-white { color: #ffffff !important; }
+
+.fw-bold { font-weight: 700 !important; }
+.fw-semibold { font-weight: 600 !important; }
+.fst-italic { font-style: italic !important; }
+.text-uppercase { text-transform: uppercase !important; }
+
+.small { font-size: 11px !important; }
+.fs-6 { font-size: 13px !important; }
+.fs-5 { font-size: 15px !important; }
+.h4, .h5 { font-weight: 700; margin: 0; }
+.h4 { font-size: 16px; }
+.h5 { font-size: 14px; }
+
+.p-2 { padding: 8px !important; }
+.p-3 { padding: 12px !important; }
+.p-4 { padding: 16px !important; }
+.px-1 { padding-left: 4px !important; padding-right: 4px !important; }
+.px-2 { padding-left: 8px !important; padding-right: 8px !important; }
+.px-3 { padding-left: 12px !important; padding-right: 12px !important; }
+.py-1 { padding-top: 4px !important; padding-bottom: 4px !important; }
+.py-2 { padding-top: 8px !important; padding-bottom: 8px !important; }
+.pt-2 { padding-top: 8px !important; }
+.pb-3 { padding-bottom: 12px !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.mb-3 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 16px !important; }
+.mt-1 { margin-top: 4px !important; }
+.mt-3 { margin-top: 12px !important; }
+.mt-4 { margin-top: 16px !important; }
+.ms-1 { margin-left: 4px !important; }
+.me-1 { margin-right: 4px !important; }
+.me-2 { margin-right: 8px !important; }
+
+.border { border: 1px solid #e2e8f0 !important; }
+.border-top { border-top: 1px solid #cbd5e1 !important; }
+.border-bottom { border-bottom: 1px solid #cbd5e1 !important; }
+.border-dark { border-color: #0f172a !important; }
+.rounded { border-radius: 4px !important; }
+.rounded-3 { border-radius: 8px !important; }
+.rounded-pill { border-radius: 9999px !important; }
+.shadow-none { box-shadow: none !important; }
+
+.bg-dark { background-color: #0f172a !important; color: #ffffff !important; }
+.bg-primary { background-color: #0284c7 !important; color: #ffffff !important; }
+.bg-light { background-color: #f8fafc !important; }
+.bg-white { background-color: #ffffff !important; }
+.bg-light-subtle { background-color: #f8fafc !important; }
+
+.bg-primary-subtle { background-color: #e0f2fe !important; }
+.bg-success-subtle { background-color: #dcfce7 !important; }
+.bg-warning-subtle { background-color: #fef9c3 !important; }
+.bg-secondary-subtle { background-color: #f1f5f9 !important; }
+.bg-danger-subtle { background-color: #fee2e2 !important; }
+.bg-info-subtle { background-color: #f0fdf4 !important; }
+
+.text-primary-emphasis { color: #0369a1 !important; }
+.text-success-emphasis { color: #15803d !important; }
+.text-warning-emphasis { color: #a16207 !important; }
+.text-danger-emphasis { color: #b91c1c !important; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 4px;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.card-header {
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.card-body {
+  padding: 10px 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -6px;
+  margin-right: -6px;
+}
+
+.col-4 {
+  flex: 0 0 33.333333%;
+  max-width: 33.333333%;
+  padding: 6px;
+}
+
+.col-md-4 {
+  flex: 0 0 33.333333%;
+  max-width: 33.333333%;
+  padding: 6px;
+}
+
+.col-sm-6 {
+  flex: 0 0 50%;
+  max-width: 50%;
+  padding: 6px;
+}
+
+@media (max-width: 768px) {
+  .col-sm-6, .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+.g-3 > * { padding: 4px 6px; }
+.g-4 > * { padding: 6px 8px; }
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.table-bordered th, .table-bordered td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+}
+
+.student-report-table th {
+  background-color: #f1f5f9;
+  color: #0b2e59;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+code {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10.5px;
+  background: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.response-kv {
+  display: inline-block;
+  margin-right: 6px;
+  margin-bottom: 2px;
+  white-space: normal;
+}
+
+/* ============================================================================
+   STRICT A4 PRINT FORMATTING RULES
+   ========================================================================== */
+
+@page {
+  size: A4 portrait;
+  margin: 6mm 8mm;
+}
+
+@media print {
+  .app-header,
+  .control-card,
+  .stats-strip,
+  .alert-banner,
+  .no-print,
+  .page-corner-counter {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 8pt;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .app-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .preview-container {
+    gap: 0 !important;
+  }
+
+  .report-page {
+    width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .report-page:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .student-report-doc {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  .table tr,
+  .student-report-signoff,
+  .card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .student-report-table th,
+  .badge {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ==========================================================================
+     INDEX PAGE STRICT 1-PAGE PRINT FORMATTING (TASK 1)
+     Guarantees that Header + Student Profile + 22 Rows + Sign-off + Footer
+     remain on Page 1 with zero overflow into a spill page.
+     ========================================================================== */
+  .index-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .index-page .student-report-header {
+    padding-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    border-bottom: 1.5px solid #0b2e59 !important;
+  }
+
+  .index-page .student-report-header h4 {
+    font-size: 10pt !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .index-page .student-report-header p {
+    font-size: 7pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .index-page .student-report-header h3 {
+    font-size: 8.5pt !important;
+    margin-bottom: 1px !important;
+  }
+
+  .index-page .student-report-header .p-2 {
+    padding: 1px 4px !important;
+  }
+
+  .index-page .card {
+    margin-bottom: 2px !important;
+    background: #fafafa !important;
+  }
+
+  .index-page .card-header {
+    padding: 1px 4px !important;
+    font-size: 7pt !important;
+  }
+
+  .index-page .card-body {
+    padding: 1px 4px !important;
+  }
+
+  .index-page .card-body .row {
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+
+  .index-page .card-body .g-3 > *,
+  .index-page .card-body .g-2 > * {
+    padding: 0px 2px !important;
+  }
+
+  .index-page .card-body span.text-muted {
+    font-size: 6.5pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .index-page .card-body strong {
+    font-size: 7pt !important;
+  }
+
+  .index-page .table {
+    margin-bottom: 2px !important;
+    line-height: 1.1 !important;
+  }
+
+  .index-page .student-report-table th {
+    padding: 1px 2px !important;
+    font-size: 6.5pt !important;
+    background-color: #f1f5f9 !important;
+  }
+
+  .index-page .student-report-table td {
+    padding: 0.8px 2px !important;
+    font-size: 6.5pt !important;
+    vertical-align: middle !important;
+    line-height: 1.1 !important;
+  }
+
+  .index-page .student-report-table td .badge {
+    padding: 0.5px 2px !important;
+    font-size: 6pt !important;
+  }
+
+  .index-page .student-report-signoff {
+    padding: 1px 4px !important;
+    margin-top: 2px !important;
+    background-color: #fafafa !important;
+  }
+
+  .index-page .student-report-signoff .row {
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+
+  .index-page .student-report-signoff .g-4 > *,
+  .index-page .student-report-signoff .g-2 > * {
+    padding: 1px 2px !important;
+  }
+
+  .index-page .student-report-signoff .border-top {
+    padding-top: 1px !important;
+  }
+
+  .index-page .student-report-signoff strong {
+    font-size: 7pt !important;
+  }
+
+  .index-page .student-report-signoff .small {
+    font-size: 6pt !important;
+  }
+
+  .index-page .border-top {
+    margin-top: 1px !important;
+    padding-top: 1px !important;
+    font-size: 6pt !important;
+  }
+
+  /* ==========================================================================
+     ASSIGNMENT PAGE PRINT FORMATTING
+     Supports reliable assignment-level pagination across multiple pages
+     with continuation headers, student breadcrumbs, and repeated tables.
+     ========================================================================== */
+  .assignment-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .continuation-page .student-report-header {
+    border-bottom: 1.5px solid #0b2e59 !important;
+    padding-bottom: 1px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .continuation-page .student-breadcrumb {
+    margin-bottom: 2px !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .continuation-page .student-breadcrumb .card-body {
+    padding: 1px 4px !important;
+    font-size: 7pt !important;
+  }
+
+  .assignment-page .student-report-header {
+    padding-bottom: 1px !important;
+    margin-bottom: 2px !important;
+    border-bottom: 1.5px solid #0b2e59 !important;
+  }
+
+  .assignment-page .student-report-header h4 {
+    font-size: 10pt !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .assignment-page .student-report-header p {
+    font-size: 7pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .assignment-page .title-box {
+    padding: 1px 4px !important;
+  }
+
+  .assignment-page .title-box h3 {
+    font-size: 8.5pt !important;
+    margin-bottom: 1px !important;
+  }
+
+  .assignment-page .title-box div {
+    font-size: 7pt !important;
+  }
+
+  .assignment-page .student-report-header .p-3,
+  .assignment-page .student-report-header .p-2 {
+    padding: 1px 4px !important;
+  }
+
+  .assignment-page .card {
+    margin-bottom: 2px !important;
+    background: #fafafa !important;
+  }
+
+  .assignment-page .student-profile-card .card-header {
+    padding: 1px 4px !important;
+    font-size: 7pt !important;
+  }
+
+  .assignment-page .student-profile-card .card-body {
+    padding: 1px 4px !important;
+  }
+
+  .assignment-page .card-body .row {
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+
+  .assignment-page .card-body .g-3 > *,
+  .assignment-page .card-body .g-2 > * {
+    padding: 0px 2px !important;
+  }
+
+  .assignment-page .card-body span.text-muted {
+    font-size: 6.5pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .assignment-page .card-body strong,
+  .assignment-page .card-body code {
+    font-size: 7pt !important;
+  }
+
+  .assignment-page .performance-strip-row {
+    margin-bottom: 2px !important;
+  }
+
+  .assignment-page .performance-strip-row .p-2 {
+    padding: 1px 3px !important;
+  }
+
+  .assignment-page .performance-strip-row span.small {
+    font-size: 6.5pt !important;
+    margin-bottom: 0 !important;
+  }
+
+  .assignment-page .performance-strip-row h4 {
+    font-size: 8pt !important;
+  }
+
+  .assignment-page .student-report-table {
+    margin-bottom: 2px !important;
+  }
+
+  .assignment-page .student-report-table th {
+    padding: 1.5px 3px !important;
+    font-size: 6.5pt !important;
+    background-color: #f1f5f9 !important;
+  }
+
+  .assignment-page .student-report-table td {
+    padding: 1px 3px !important;
+    font-size: 7pt !important;
+    vertical-align: middle !important;
+    line-height: 1.15 !important;
+  }
+
+  .assignment-page .student-report-table td strong.text-dark {
+    font-size: 7.5pt !important;
+  }
+
+  .assignment-page .student-report-table td .small {
+    font-size: 6.8pt !important;
+    line-height: 1.15 !important;
+  }
+
+  .assignment-page .student-report-table td code {
+    font-size: 6.5pt !important;
+    padding: 0px 2px !important;
+  }
+
+  .assignment-page .student-report-table td .badge {
+    padding: 0.5px 3px !important;
+    font-size: 6pt !important;
+  }
+
+  .faculty-assessed-content {
+    font-size: 7pt !important;
+    line-height: 1.18 !important;
+    white-space: pre-wrap !important;
+    color: #1e293b !important;
+  }
+
+  .assignment-page .student-report-signoff {
+    padding: 1px 4px !important;
+    margin-top: 2px !important;
+    background-color: #fafafa !important;
+  }
+
+  .assignment-page .student-report-signoff .row {
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+
+  .assignment-page .student-report-signoff .g-4 > *,
+  .assignment-page .student-report-signoff .g-2 > * {
+    padding: 1px 2px !important;
+  }
+
+  .assignment-page .student-report-signoff .border-top {
+    padding-top: 1px !important;
+  }
+
+  .assignment-page .student-report-signoff strong {
+    font-size: 7pt !important;
+  }
+
+  .assignment-page .student-report-signoff .small {
+    font-size: 6pt !important;
+  }
+
+  .assignment-page .student-report-signoff .p-2,
+  .assignment-page .student-report-signoff .p-1 {
+    padding: 1px 4px !important;
+  }
+
+  .assignment-page .border-top {
+    margin-top: 1px !important;
+    padding-top: 1px !important;
+    font-size: 6pt !important;
+  }
+
+  .not-submitted-page .alert-danger {
+    padding: 3px 6px !important;
+    margin-bottom: 2px !important;
+  }
+}

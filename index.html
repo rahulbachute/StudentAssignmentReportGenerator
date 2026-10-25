@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DES — Student Assignment Report Generator (MEILP Style)</title>
+  <link rel="stylesheet" href="css/report-generator.css">
+</head>
+<body>
+
+  <!-- Screen Header & Control UI (Hidden in Print) -->
+  <div class="app-container no-print">
+    <header class="app-header">
+      <div class="app-title-group">
+        <h1>DES • Student Assignment Report Generator</h1>
+        <p class="app-subtitle">Assignment-Wise Hard-Copy Reports (Exact MEILP Style • Portfolio Package &amp; Slot View)</p>
+      </div>
+      <div class="app-actions">
+        <button type="button" id="btnPrintPackage" class="btn-primary">
+          🖨️ Print Full Portfolio
+        </button>
+        <button type="button" id="btnPrintCurrent" class="btn-secondary" style="display: none;">
+          🖨️ Print Current View
+        </button>
+        <button type="button" id="btnToggleFacultyMode" class="btn-secondary" style="background: rgba(255,255,255,0.15); color: #ffffff; border-color: rgba(255,255,255,0.35);">
+          ⚙️ Faculty Access
+        </button>
+      </div>
+    </header>
+
+    <!-- Portal Mode & Status Indicator Strip -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+      <div id="portalModeBadge" class="badge badge-fixture" style="font-size: 11.5px; padding: 5px 12px;">
+        🎓 Student Access Portal • Name-Based Portfolio Download
+      </div>
+      <div id="facultyStatusIndicator" style="display: none; font-size: 11.5px; color: #b45309; font-weight: 600;">
+        ⚠️ Faculty Administration Mode Active
+      </div>
+    </div>
+
+    <!-- Feedback Notice Banner -->
+    <div id="noticeBanner" class="alert-banner alert-info" style="display: none; margin-bottom: 14px;">
+      <span id="noticeText"></span>
+    </div>
+
+    <!-- =======================================================================
+         SECTION 1: STUDENT ACCESS PORTAL (Agreed Workflow: Division -> Name)
+         ======================================================================= -->
+    <div id="studentPortalSection">
+      <!-- Student Division & Name Selection Card -->
+      <div id="studentSelectorCard" class="control-card" style="margin-bottom: 16px; border: 1px solid #bfdbfe; background: #ffffff;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0b2e59;">🎓 Student Assignment Portfolio Download</h3>
+            <p class="text-muted" style="margin: 2px 0 0; font-size: 12.5px;">
+              Select your official division or Unlisted Students, then your name to generate, view, and print your complete Design Engineering Studio report package.
+            </p>
+          </div>
+          <span class="badge badge-fixture" style="font-size: 11px; white-space: nowrap;">Open Student Access • No Login Required</span>
+        </div>
+
+        <div class="control-row" style="align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+          <!-- Step 1: Select Division -->
+          <div class="form-group" style="flex: 1.2; min-width: 180px;">
+            <label for="studentDivisionSelect" style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">1. Select Student Category</label>
+            <select id="studentDivisionSelect" class="form-select" style="height: 38px; font-weight: 600;">
+              <option value="">-- Choose Division --</option>
+              <optgroup label="Official Students">
+              <option value="TE-A">Division TE-A (71 Students)</option>
+              <option value="TE-B">Division TE-B (75 Students)</option>
+              <option value="TE-C">Division TE-C (70 Students)</option>
+              </optgroup>
+              <optgroup label="Unlisted Students — attendance match unconfirmed">
+                <option value="UNLISTED">Unlisted Students</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Step 2: Select Student Name -->
+          <div class="form-group" style="flex: 2.5; min-width: 270px;">
+            <label for="studentNameSelect" style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">2. Select Your Name</label>
+            <select id="studentNameSelect" class="form-select" style="height: 38px;" disabled>
+              <option value="">-- Select Division First --</option>
+            </select>
+          </div>
+
+          <!-- Step 3: View Mode / Slot Selector -->
+          <div class="form-group" style="flex: 1.8; min-width: 220px;">
+            <label for="studentSlotSelect" style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">3. Portfolio View</label>
+            <select id="studentSlotSelect" class="form-select" style="height: 38px;">
+              <option value="all">Complete Portfolio (Index + 22 Slots)</option>
+            </select>
+          </div>
+
+          <!-- Action Button: Generate Portfolio -->
+          <button type="button" id="btnGenerateStudentPortfolio" class="btn-primary" style="height: 38px; padding: 0 18px; white-space: nowrap; font-weight: 600;" disabled>
+            📄 Generate Student Portfolio
+          </button>
+        </div>
+
+        <!-- Transparent Access Notice -->
+        <div style="margin-top: 12px; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11.5px; color: #475569; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span>ℹ️ <strong>Workflow Notice:</strong> No Gmail sign-in, personal PIN, or credentials are required. Anyone with access to this tool can select any student name and retrieve their portfolio. Unrelated administrative data and faculty access keys are never exposed.</span>
+          <button type="button" id="btnResetStudentSelection" class="btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px;">🔄 Reset Selection</button>
+        </div>
+      </div>
+
+      <!-- Active Student Summary Stats Strip (Visible once a student portfolio is generated) -->
+      <div class="stats-strip" id="studentStatsStrip" style="display: none; margin-bottom: 16px;">
+        <div class="stat-box">
+          <span class="stat-label">Selected Student</span>
+          <span class="stat-value" id="studentStatName">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Roll &amp; Division</span>
+          <span class="stat-value" id="studentStatRollDiv">—</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Assignments Completed</span>
+          <span class="stat-value text-success" id="studentStatCompleted">0 / 22</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Missing Slots (Not Submitted)</span>
+          <span class="stat-value text-danger" id="studentStatMissing">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Confirmed Late Submissions</span>
+          <span class="stat-value text-warning" id="studentStatLate">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         SECTION 2: FACULTY ADMINISTRATOR WORKSPACE (Protected by Passcode)
+         ======================================================================= -->
+    <div id="facultyWorkspaceSection" style="display: none;">
+      <!-- Faculty Access Unlock Prompt (Shown if not yet unlocked) -->
+      <div id="facultyLockCard" class="control-card" style="margin-bottom: 16px; border: 1px solid #fde047; background: #fefce8;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #854d0e;">🔒 Faculty Administrator Verification</h4>
+          <button type="button" id="btnCancelFaculty" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">✕ Return to Student Portal</button>
+        </div>
+        <p style="margin: 0 0 10px; font-size: 12px; color: #713f12;">
+          Enter the private <code>REPORT_SERVICE_ACCESS_KEY</code> to unlock the official roster importer, live Google Sheets connection, discrepancy audit inspector, and full 216-student directory.
+        </p>
+        <div class="control-row" style="align-items: flex-end;">
+          <div class="form-group" style="flex: 2;">
+            <label for="facultyMasterKeyInput">Faculty Service Access Key</label>
+            <input type="password" id="facultyMasterKeyInput" class="form-control" placeholder="Enter private service key">
+          </div>
+          <button type="button" id="btnUnlockFaculty" class="btn-primary" style="height: 38px;">Unlock Faculty Controls</button>
+        </div>
+      </div>
+
+      <!-- Faculty Controls Container (Shown once unlocked) -->
+      <div id="facultyControlsContainer" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: #fff7ed; border: 1px solid #ffedd5; border-radius: 6px;">
+          <span style="font-size: 12px; color: #c2410c; font-weight: 600;">⚙️ Faculty Administrator Controls Unlocked (All 216 Students &amp; Roster Tools)</span>
+          <button type="button" id="btnExitFaculty" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">🔒 Lock &amp; Return to Student Portal</button>
+        </div>
+
+        <!-- Source Connection Section 1: Official Attendance Roll-Call Roster -->
+        <div class="control-card" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px;">
+            <div>
+              <h3 style="margin: 0; font-size: 15px; font-weight: 700;">1. Official Attendance Roll-Call Roster</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 12px;">
+                Authoritative source for student names, roll numbers, and divisions on Index/Summary pages and dropdowns.
+              </p>
+            </div>
+            <div id="rosterStatusBadge" class="badge badge-fixture" style="white-space: nowrap;">
+              Roster: Offline Test Fixture (216 students)
+            </div>
+          </div>
+
+          <div class="control-row" style="align-items: flex-end;">
+            <div class="form-group" style="flex: 2;">
+              <label for="rosterFileInput">Import Official Attendance Roster (.xlsx)</label>
+              <input type="file" id="rosterFileInput" class="form-control" accept=".xlsx">
+            </div>
+            <button type="button" id="btnUseFixtureRoster" class="btn-secondary" style="height: 38px; white-space: nowrap;">
+              Use Offline Test Fixture
+            </button>
+          </div>
+          <div id="rosterDetailsText" style="margin-top: 8px; font-size: 12px; color: #475569;">
+            Loaded: 216 Students (TE-A: 71, TE-B: 75, TE-C: 70) • 5 duplicate roll numbers identified in TE-B.
+          </div>
+        </div>
+
+        <!-- Source Connection Section 2: MEILP Student Submissions -->
+        <div class="control-card" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px;">
+            <div>
+              <h3 style="margin: 0; font-size: 15px; font-weight: 700;">2. MEILP Student Submissions</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 12px;">
+                Authoritative source for student responses, calculations, timestamps, and hashes on individual assignment pages.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div id="configStatusBadge" class="badge badge-offline" style="white-space: nowrap;">
+                Admin Setup Required
+              </div>
+              <div id="submissionsStatusBadge" class="badge badge-offline" style="white-space: nowrap;">
+                Submissions: Not Connected
+              </div>
+            </div>
+          </div>
+
+          <div class="control-tabs">
+            <button type="button" class="tab-btn active" data-tab="tab-api">Live Google Sheets (Apps Script)</button>
+            <button type="button" class="tab-btn" data-tab="tab-file">Upload CSV / JSON Export</button>
+            <button type="button" class="tab-btn" data-tab="tab-demo">Verified Demo Data</button>
+          </div>
+
+          <!-- Tab A: Remote Google Sheets -->
+          <div class="tab-content" id="tab-api">
+            <div class="control-row">
+              <div class="form-group" style="flex: 2;">
+                <label for="apiUrl">Read-Only Apps Script Web App URL</label>
+                <input type="url" id="apiUrl" class="form-control" value="https://script.google.com/macros/s/AKfycbyt5CQK1ru-Y6NuXLef4qIqfy6rmQM_LKENAd1HdBpkbAwKOoksHYsx_-yb3jSMyUvQgQ/exec" placeholder="https://script.google.com/macros/s/.../exec">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label for="authKey">Report Access Key (Passcode)</label>
+                <input type="password" id="authKey" class="form-control" placeholder="Enter private service key">
+              </div>
+              <button type="button" id="btnConnectApi" class="btn-primary" style="height: 38px; white-space: nowrap;">Connect &amp; Fetch</button>
+              <button type="button" id="btnRefreshApi" class="btn-secondary" style="height: 38px; white-space: nowrap;" disabled>🔄 Refresh Data</button>
+              <button type="button" id="btnToggleAdminSetup" class="btn-secondary" style="height: 38px; white-space: nowrap;" title="Administrator Configuration & Setup">⚙️ Admin Setup</button>
+            </div>
+
+            <!-- Administrator Setup & Persistence Panel -->
+            <div id="adminSetupPanel" style="display: none; margin-top: 12px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #0f172a; font-size: 13px;">⚙️ Administrator Setup &amp; Endpoint Configuration</strong>
+                <span id="adminConfigStatusText" style="font-size: 11px;">Status: Checking...</span>
+              </div>
+              <p style="margin: 0 0 10px; color: #475569; line-height: 1.4;">
+                Configure your independent read-only Google Apps Script web app endpoint. The access key is verified server-side against <code>REPORT_SERVICE_ACCESS_KEY</code> in Script Properties. Zero write operations are permitted.
+              </p>
+
+              <!-- Security Advisory Box -->
+              <div style="margin: 8px 0 10px; padding: 8px 10px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 4px; color: #92400e; font-size: 11px; line-height: 1.4;">
+                ⚠️ <strong>Security Notice:</strong> Browser storage (localStorage/sessionStorage) is convenience caching for administrative workflows and does NOT provide an encrypted enclave. Anyone with physical access or DevTools on this computer can inspect stored values. On shared faculty workstations, always use <strong>Session Storage</strong> and click <strong>Clear Configuration</strong> when finished.
+              </div>
+
+              <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <label for="selStorageMode" style="font-weight: 600; white-space: nowrap;">Storage Tier:</label>
+                  <select id="selStorageMode" class="form-control" style="height: 30px; font-size: 11px; padding: 2px 8px; width: auto;">
+                    <option value="session" selected>Session Storage (Recommended for shared faculty computers — clears on tab close)</option>
+                    <option value="local">Local Storage (Persistent across browser sessions on personal workstation)</option>
+                    <option value="memory">Memory Only (Never written to disk — clears on page reload)</option>
+                  </select>
+                </div>
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+                  <input type="checkbox" id="chkAutoConnect" style="margin: 0;"> Auto-connect automatically on launch
+                </label>
+              </div>
+
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="btnSaveConfig" class="btn-secondary" style="height: 30px; padding: 0 10px; font-size: 11px;">💾 Save Configuration</button>
+                <button type="button" id="btnTestConfig" class="btn-secondary" style="height: 30px; padding: 0 10px; font-size: 11px;">🧪 Test Connection</button>
+                <button type="button" id="btnClearConfig" class="btn-secondary" style="height: 30px; padding: 0 10px; font-size: 11px; color: #b91c1c;">🗑️ Clear Configuration</button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: #64748b;">
+              <span>🔒 Read-only access to Student_Submissions &amp; Faculty_Evaluation. Zero write operations.</span>
+              <span id="lastRefreshDisplay" style="font-weight: 600;">Last Sync: Never</span>
+            </div>
+          </div>
+
+          <!-- Tab B: Local File Import -->
+          <div class="tab-content" id="tab-file" style="display: none;">
+            <div class="form-group">
+              <label for="fileInput">Select Exported Student_Submissions CSV or JSON File</label>
+              <input type="file" id="fileInput" class="form-control" accept=".json,.csv">
+            </div>
+          </div>
+
+          <!-- Tab C: Demo Data -->
+          <div class="tab-content" id="tab-demo" style="display: none;">
+            <p class="text-muted" style="margin-bottom: 12px; font-size: 13px;">
+              Loads verified multi-student submission dataset covering multiple attempts, on-time, late, unflagged, and missing assignment scenarios.
+            </p>
+            <button type="button" id="btnLoadDemo" class="btn-secondary">Load Verified Sample Data</button>
+          </div>
+        </div>
+
+        <!-- Live Data Reconciliation & Audit Strip -->
+        <div class="stats-strip" id="reconciliationStrip" style="display: flex; margin-bottom: 16px;">
+          <div class="stat-box">
+            <span class="stat-label">Official Roster</span>
+            <span class="stat-value" id="statRosterTotal">216</span>
+            <small class="text-muted" id="statRosterDivs" style="display: block; font-size: 10px; margin-top: 2px;">TE-A: 71 | TE-B: 75 | TE-C: 70</small>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">MEILP Submissions</span>
+            <span class="stat-value text-primary" id="statSubmissionsTotal">0</span>
+            <small class="text-muted" id="statSubmissionsSource" style="display: block; font-size: 10px; margin-top: 2px;">Source: None</small>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Matched Records</span>
+            <span class="stat-value text-success" id="statMatchedTotal">0</span>
+            <small class="text-muted" style="display: block; font-size: 10px; margin-top: 2px;">Reconciled to Roster</small>
+          </div>
+          <div class="stat-box" id="boxReviewRequired" style="cursor: pointer;" title="Click to inspect review-required items">
+            <span class="stat-label">Review Required 🔍</span>
+            <span class="stat-value text-warning" id="statReviewTotal">0</span>
+            <small class="text-muted" id="statReviewBreakdown" style="display: block; font-size: 10px; margin-top: 2px;">0 conflict • 0 ambig • 0 unmatch</small>
+          </div>
+          <div class="stat-box" id="boxZeroSubmissions" style="cursor: pointer;" title="Click to view zero-submission students">
+            <span class="stat-label">Zero Submissions ⚠️</span>
+            <span class="stat-value text-danger" id="statZeroTotal">216</span>
+            <small class="text-muted" style="display: block; font-size: 10px; margin-top: 2px;">Click to inspect list</small>
+          </div>
+        </div>
+
+        <!-- Collapsible Audit Inspector Panel -->
+        <div id="auditInspectorPanel" class="control-card" style="display: none; margin-bottom: 16px; border: 1px solid #cbd5e1; background: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 id="auditInspectorTitle" style="margin: 0; font-size: 14px; font-weight: 700;">Audit Inspector</h4>
+            <button type="button" id="btnCloseAuditInspector" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">✕ Close</button>
+          </div>
+          <div id="auditInspectorContent" style="max-height: 260px; overflow-y: auto; font-size: 12px;"></div>
+        </div>
+
+        <!-- Student Selection & Portfolio View Card -->
+        <div class="control-card" style="margin-bottom: 16px;">
+          <div class="control-row">
+            <div class="form-group" style="flex: 2;">
+              <label for="studentSelect">Select Student (Division-Wise)</label>
+              <select id="studentSelect" class="form-select" disabled>
+                <option value="">-- Load data to select student --</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1.5;">
+              <label for="viewMode">Report View Mode</label>
+              <select id="viewMode" class="form-select" disabled>
+                <option value="full">Complete Portfolio Package (Index + 22 Slots)</option>
+                <option value="single">Single Assignment Report (MEILP Style)</option>
+              </select>
+            </div>
+            <div class="form-group" id="assignmentPickerGroup" style="flex: 1.5; display: none;">
+              <label for="assignmentSelect">Choose Assignment Slot</label>
+              <select id="assignmentSelect" class="form-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Student Summary Stats Strip -->
+        <div class="stats-strip" id="statsStrip" style="display: none; margin-bottom: 16px;">
+          <div class="stat-box">
+            <span class="stat-label">Selected Student</span>
+            <span class="stat-value" id="statStudentName">—</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Roll Number &amp; Division</span>
+            <span class="stat-value" id="statRollDiv">—</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Assignments Completed</span>
+            <span class="stat-value text-success" id="statCompleted">0 / 22</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Missing Slots (Not Submitted)</span>
+            <span class="stat-value text-danger" id="statMissing">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Confirmed Late Submissions</span>
+            <span class="stat-value text-warning" id="statLate">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Container -->
+  <main class="app-container">
+    <div id="reportOutput" class="preview-container">
+      <div class="report-page" style="text-align: center; justify-content: center; color: #64748b;">
+        <h3 style="margin-bottom: 8px;">No Student Selected</h3>
+        <p>Please load submission data and select a student from the dropdown above to generate the report.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Load Independent Frontend Scripts -->
+  <script src="js/vendor/xlsx.full.min.js"></script>
+  <script src="js/assignment-registry.js"></script>
+  <script src="js/official-roster.js"></script>
+  <script src="js/identity-policy.js"></script>
+  <script src="js/data-service.js"></script>
+  <script src="js/report-renderer.js"></script>
+
+  <!-- App Controller Script -->
+  <script>
+    (function() {
+      'use strict';
+
+      var dataService = new DataService();
+      var currentPackage = null;
+
+      var studentSelect = document.getElementById('studentSelect');
+      var viewMode = document.getElementById('viewMode');
+      var assignmentPickerGroup = document.getElementById('assignmentPickerGroup');
+      var assignmentSelect = document.getElementById('assignmentSelect');
+      var reportOutput = document.getElementById('reportOutput');
+      var statsStrip = document.getElementById('statsStrip');
+      var noticeBanner = document.getElementById('noticeBanner');
+      var noticeText = document.getElementById('noticeText');
+      var btnPrintPackage = document.getElementById('btnPrintPackage');
+      var btnPrintCurrent = document.getElementById('btnPrintCurrent');
+
+      var rosterStatusBadge = document.getElementById('rosterStatusBadge');
+      var rosterDetailsText = document.getElementById('rosterDetailsText');
+      var rosterFileInput = document.getElementById('rosterFileInput');
+      var btnUseFixtureRoster = document.getElementById('btnUseFixtureRoster');
+
+      var submissionsStatusBadge = document.getElementById('submissionsStatusBadge');
+      var configStatusBadge = document.getElementById('configStatusBadge');
+      var btnConnectApi = document.getElementById('btnConnectApi');
+      var btnRefreshApi = document.getElementById('btnRefreshApi');
+      var btnToggleAdminSetup = document.getElementById('btnToggleAdminSetup');
+      var adminSetupPanel = document.getElementById('adminSetupPanel');
+      var adminConfigStatusText = document.getElementById('adminConfigStatusText');
+      var chkAutoConnect = document.getElementById('chkAutoConnect');
+      var btnSaveConfig = document.getElementById('btnSaveConfig');
+      var btnTestConfig = document.getElementById('btnTestConfig');
+      var btnClearConfig = document.getElementById('btnClearConfig');
+      var lastRefreshDisplay = document.getElementById('lastRefreshDisplay');
+
+      var statRosterTotal = document.getElementById('statRosterTotal');
+      var statRosterDivs = document.getElementById('statRosterDivs');
+      var statSubmissionsTotal = document.getElementById('statSubmissionsTotal');
+      var statSubmissionsSource = document.getElementById('statSubmissionsSource');
+      var statMatchedTotal = document.getElementById('statMatchedTotal');
+      var statReviewTotal = document.getElementById('statReviewTotal');
+      var statReviewBreakdown = document.getElementById('statReviewBreakdown');
+      var statZeroTotal = document.getElementById('statZeroTotal');
+
+      var auditInspectorPanel = document.getElementById('auditInspectorPanel');
+      var auditInspectorTitle = document.getElementById('auditInspectorTitle');
+      var auditInspectorContent = document.getElementById('auditInspectorContent');
+      var btnCloseAuditInspector = document.getElementById('btnCloseAuditInspector');
+
+      // Student Portal & Dual-Mode UI Elements
+      var portalModeBadge = document.getElementById('portalModeBadge');
+      var facultyStatusIndicator = document.getElementById('facultyStatusIndicator');
+      var btnToggleFacultyMode = document.getElementById('btnToggleFacultyMode');
+      var studentPortalSection = document.getElementById('studentPortalSection');
+      var studentDivisionSelect = document.getElementById('studentDivisionSelect');
+      var studentNameSelect = document.getElementById('studentNameSelect');
+      var studentSlotSelect = document.getElementById('studentSlotSelect');
+      var btnGenerateStudentPortfolio = document.getElementById('btnGenerateStudentPortfolio');
+      var btnResetStudentSelection = document.getElementById('btnResetStudentSelection');
+      var studentStatsStrip = document.getElementById('studentStatsStrip');
+      var studentStatName = document.getElementById('studentStatName');
+      var studentStatRollDiv = document.getElementById('studentStatRollDiv');
+      var studentStatCompleted = document.getElementById('studentStatCompleted');
+      var studentStatMissing = document.getElementById('studentStatMissing');
+      var studentStatLate = document.getElementById('studentStatLate');
+
+      var facultyWorkspaceSection = document.getElementById('facultyWorkspaceSection');
+      var facultyLockCard = document.getElementById('facultyLockCard');
+      var facultyControlsContainer = document.getElementById('facultyControlsContainer');
+      var facultyMasterKeyInput = document.getElementById('facultyMasterKeyInput');
+      var btnUnlockFaculty = document.getElementById('btnUnlockFaculty');
+      var btnCancelFaculty = document.getElementById('btnCancelFaculty');
+      var btnExitFaculty = document.getElementById('btnExitFaculty');
+
+      var isFacultyUnlocked = false;
+      var currentAppMode = 'STUDENT'; // 'STUDENT' | 'FACULTY'
+
+      function showNotice(text, type) {
+        noticeBanner.className = 'alert-banner alert-' + (type || 'info');
+        noticeText.textContent = text;
+        noticeBanner.style.display = 'flex';
+      }
+
+      function hideNotice() {
+        noticeBanner.style.display = 'none';
+      }
+
+      // Tab Switching
+      var tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          tabs.forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          var targetId = btn.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = 'none';
+          });
+          document.getElementById(targetId).style.display = 'block';
+        });
+      });
+
+      // Populate assignment slot dropdowns (for both Faculty Mode and Student Mode)
+      function populateAssignmentPicker() {
+        assignmentSelect.innerHTML = '';
+        if (studentSlotSelect) {
+          studentSlotSelect.innerHTML = '<option value="all">Complete Portfolio (Index + 22 Slots)</option>';
+        }
+        AssignmentRegistry.ASSIGNMENTS.forEach(function(a, idx) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = 'Slot ' + (idx + 1) + ' (Page ' + (idx + 2) + '): ' + a.id + ' — ' + a.title;
+          assignmentSelect.appendChild(opt);
+
+          if (studentSlotSelect) {
+            var sOpt = document.createElement('option');
+            sOpt.value = a.id;
+            sOpt.textContent = 'Slot ' + (idx + 1) + ' (Page ' + (idx + 2) + '): ' + a.id + ' — ' + a.title;
+            studentSlotSelect.appendChild(sOpt);
+          }
+        });
+      }
+      populateAssignmentPicker();
+
+      // Update Roster Status Indicators
+      function updateRosterStatus() {
+        if (dataService.isOfficialRosterLive && dataService.officialRosterSource === 'EXCEL_IMPORT') {
+          rosterStatusBadge.className = 'badge badge-live';
+          rosterStatusBadge.textContent = '🟢 Official Roster: Live from Excel';
+        } else if (dataService.isOfficialRosterLive && dataService.officialRosterSource === 'LIVE_SHEET') {
+          rosterStatusBadge.className = 'badge badge-live';
+          rosterStatusBadge.textContent = '🟢 Official Roster: Live from Sheet';
+        } else if (dataService.officialRosterSource === 'OFFLINE_FIXTURE') {
+          rosterStatusBadge.className = 'badge badge-fixture';
+          rosterStatusBadge.textContent = '⚠️ Official Roster: Offline Test Fixture';
+        } else {
+          rosterStatusBadge.className = 'badge badge-offline';
+          rosterStatusBadge.textContent = '⚪ Official Roster: Not Loaded';
+        }
+
+        var report = dataService.getReconciliationReport();
+        statRosterTotal.textContent = report.totalRosterStudents;
+        statRosterDivs.textContent = 'TE-A: ' + (report.divisionCounts['TE-A'] || 0) + ' | TE-B: ' + (report.divisionCounts['TE-B'] || 0) + ' | TE-C: ' + (report.divisionCounts['TE-C'] || 0);
+
+        rosterDetailsText.textContent = 'Loaded: ' + report.totalRosterStudents + ' Students (' +
+          'TE-A: ' + (report.divisionCounts['TE-A'] || 0) + ', ' +
+          'TE-B: ' + (report.divisionCounts['TE-B'] || 0) + ', ' +
+          'TE-C: ' + (report.divisionCounts['TE-C'] || 0) + ') • ' +
+          (dataService.activeDuplicateRolls ? dataService.activeDuplicateRolls.length : 0) + ' duplicate roll numbers identified in TE-B.';
+      }
+
+      // Update Submissions & Reconciliation Strip Indicators
+      function updateReconciliationStrip() {
+        var report = dataService.getReconciliationReport();
+
+        if (dataService.isSubmissionsLive && dataService.submissionsSource === 'LIVE_GOOGLE_SHEETS') {
+          submissionsStatusBadge.className = 'badge badge-live';
+          submissionsStatusBadge.textContent = '🟢 Submissions: Live Google Sheets';
+          btnRefreshApi.disabled = false;
+        } else if (dataService.submissionsSource === 'OFFLINE_FILE') {
+          submissionsStatusBadge.className = 'badge badge-fixture';
+          submissionsStatusBadge.textContent = '📁 Submissions: Uploaded File';
+          btnRefreshApi.disabled = true;
+        } else if (dataService.submissionsSource === 'VERIFIED_DEMO') {
+          submissionsStatusBadge.className = 'badge badge-offline';
+          submissionsStatusBadge.textContent = '🔬 Submissions: Verified Demo Data';
+          btnRefreshApi.disabled = true;
+        } else {
+          submissionsStatusBadge.className = 'badge badge-offline';
+          submissionsStatusBadge.textContent = '⚪ Submissions: Not Connected';
+          btnRefreshApi.disabled = true;
+        }
+
+        if (report.lastRefreshTimestamp) {
+          var d = new Date(report.lastRefreshTimestamp);
+          lastRefreshDisplay.textContent = 'Last Sync: ' + d.toLocaleTimeString();
+        } else {
+          lastRefreshDisplay.textContent = 'Last Sync: Never';
+        }
+
+        statSubmissionsTotal.textContent = report.totalSubmissions;
+        statSubmissionsSource.textContent = 'Source: ' + report.submissionsSource;
+        statMatchedTotal.textContent = report.matchedRecords;
+
+        var reviewTotal = report.conflictingRecords + report.ambiguousRecords + report.unmatchedRecords;
+        statReviewTotal.textContent = reviewTotal;
+        statReviewBreakdown.textContent = report.conflictingRecords + ' conflict • ' + report.ambiguousRecords + ' ambig • ' + report.unmatchedRecords + ' unmatch';
+
+        statZeroTotal.textContent = report.studentsZeroSubmissions;
+      }
+
+      // Populate student dropdown with division-wise optgroups (TE-A, TE-B, TE-C)
+      function updateStudentDropdown(students) {
+        studentSelect.innerHTML = '<option value="">-- Choose a student (' + students.length + ' entries) --</option>';
+
+        var divisions = ['TE-A', 'TE-B', 'TE-C'];
+        divisions.forEach(function(div) {
+          var divStudents = students.filter(function(s) { return s.isOfficialRoster !== false && s.division === div; });
+          if (divStudents.length > 0) {
+            var group = document.createElement('optgroup');
+            var submittedCount = divStudents.filter(function(s) { return s.hasSubmissions; }).length;
+            group.label = 'Division ' + div + ' (' + divStudents.length + ' Students • ' + submittedCount + ' Active)';
+            divStudents.forEach(function(st) {
+              var opt = document.createElement('option');
+              opt.value = st.id || st.rollNumber;
+              var badge = st.hasSubmissions ? (st.submittedSlotsCount + '/22 slots') : '0/22 slots (Not Submitted)';
+              opt.textContent = st.rollNumber + ' — ' + st.studentName + ' (' + badge + ')';
+              group.appendChild(opt);
+            });
+            studentSelect.appendChild(group);
+          }
+        });
+
+        // Any unmatched non-roster records (flagged for review)
+        var unmatched = students.filter(function(s) { return s.isOfficialRoster === false; });
+        if (unmatched.length > 0) {
+          var uGroup = document.createElement('optgroup');
+          uGroup.label = 'Unlisted Students / Review Required (' + unmatched.length + ' Entries)';
+          unmatched.forEach(function(st) {
+            var opt = document.createElement('option');
+            opt.value = st.id || st.rollNumber;
+            opt.textContent = (st.rollNumber !== '—' ? st.rollNumber + ' — ' : '') + st.studentName + ' [' + (st.matchStatus || 'REVIEW REQUIRED') + ']';
+            uGroup.appendChild(opt);
+          });
+          studentSelect.appendChild(uGroup);
+        }
+
+        studentSelect.disabled = false;
+        viewMode.disabled = false;
+
+        updateRosterStatus();
+        updateReconciliationStrip();
+      }
+
+      // View Mode Toggle (Full 23 pages vs Single Assignment)
+      viewMode.addEventListener('change', function() {
+        if (viewMode.value === 'single') {
+          assignmentPickerGroup.style.display = 'block';
+          btnPrintPackage.style.display = 'none';
+          btnPrintCurrent.style.display = 'inline-flex';
+          btnPrintCurrent.textContent = '🖨️ Print Selected Assignment';
+        } else {
+          assignmentPickerGroup.style.display = 'none';
+          btnPrintPackage.style.display = 'inline-flex';
+          btnPrintCurrent.style.display = 'none';
+        }
+        renderActiveView();
+      });
+
+      assignmentSelect.addEventListener('change', function() {
+        renderActiveView();
+      });
+
+      // Render Active View (Full 23 Pages or Single Assignment)
+      function renderActiveView() {
+        if (!currentPackage) return;
+
+        var isSingle = false;
+        var targetSlotId = null;
+
+        if (currentAppMode === 'STUDENT') {
+          if (studentSlotSelect && studentSlotSelect.value !== 'all') {
+            isSingle = true;
+            targetSlotId = studentSlotSelect.value;
+            btnPrintPackage.style.display = 'none';
+            btnPrintCurrent.style.display = 'inline-flex';
+            btnPrintCurrent.textContent = '🖨️ Print Selected Assignment';
+          } else {
+            btnPrintPackage.style.display = 'inline-flex';
+            btnPrintCurrent.style.display = 'none';
+          }
+        } else {
+          if (viewMode.value === 'single') {
+            isSingle = true;
+            targetSlotId = assignmentSelect.value;
+          }
+        }
+
+        if (isSingle && targetSlotId) {
+          var targetSlot = currentPackage.assignmentSlots.find(function(s) { return s.assignment.id === targetSlotId; });
+          if (targetSlot) {
+            reportOutput.innerHTML = ReportRenderer.renderSingleAssignmentReport(targetSlot, currentPackage);
+            showNotice('Displaying assignment report for ' + targetSlot.assignment.id + ': ' + targetSlot.assignment.title + ' (' + (targetSlot.isSubmitted ? 'Submitted' : 'Not Submitted') + ') in MEILP style.', 'info');
+          }
+        } else {
+          reportOutput.innerHTML = ReportRenderer.renderCompletePackage(currentPackage);
+          if (btnPrintPackage) {
+            btnPrintPackage.textContent = '🖨️ Print Full Portfolio (' + currentPackage.totalPages + ' Pages)';
+          }
+          showNotice('Generated complete portfolio (' + currentPackage.totalPages + ' pages) for ' + currentPackage.studentInfo.studentName + ' in MEILP style. Ready for physical A4 printing or PDF export.', 'success');
+        }
+      }
+
+      if (studentSlotSelect) {
+        studentSlotSelect.addEventListener('change', renderActiveView);
+      }
+
+      // Generate report for selected student
+      studentSelect.addEventListener('change', function() {
+        var roll = studentSelect.value;
+        if (!roll) {
+          statsStrip.style.display = 'none';
+          reportOutput.innerHTML = '<div class="report-page" style="text-align: center; justify-content: center; color: #64748b;"><h3>No Student Selected</h3><p>Please select a student from the dropdown above.</p></div>';
+          return;
+        }
+
+        currentPackage = dataService.getStudentReportPackage(roll);
+        if (!currentPackage) {
+          showNotice('No records found for identifier ' + roll, 'danger');
+          return;
+        }
+
+        // Update stats
+        document.getElementById('statStudentName').textContent = currentPackage.studentInfo.studentName;
+        document.getElementById('statRollDiv').textContent = 'Roll ' + currentPackage.studentInfo.rollNumber + ' • Div ' + currentPackage.studentInfo.division;
+        document.getElementById('statCompleted').textContent = currentPackage.submittedCount + ' / 22';
+        document.getElementById('statMissing').textContent = currentPackage.missingCount;
+        document.getElementById('statLate').textContent = currentPackage.lateCount;
+        statsStrip.style.display = 'flex';
+
+        renderActiveView();
+      });
+
+      // -----------------------------------------------------------------------
+      // Official Attendance Roster Event Handlers
+      // -----------------------------------------------------------------------
+      rosterFileInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        showNotice('Parsing Excel workbook "' + file.name + '" for official TE-A, TE-B, TE-C roll calls...', 'info');
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            var data = evt.target.result;
+            dataService.loadRosterFromExcel(data, function(err, result) {
+              if (err) {
+                showNotice('Failed to import official roster: ' + err.message, 'danger');
+              } else {
+                updateStudentDropdown(dataService.getStudentsSummary());
+                showNotice('Official Roster imported dynamically: ' + result.totalStudents + ' students (' +
+                  'TE-A: ' + result.divisionCounts['TE-A'] + ', ' +
+                  'TE-B: ' + result.divisionCounts['TE-B'] + ', ' +
+                  'TE-C: ' + result.divisionCounts['TE-C'] + ') • ' +
+                  result.duplicateRolls.length + ' duplicate roll numbers flagged.', 'success');
+              }
+            });
+          } catch (err) {
+            showNotice('Failed to process Excel workbook: ' + err.message, 'danger');
+          }
+        };
+        reader.onerror = function() {
+          showNotice('Failed to read file from disk.', 'danger');
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      btnUseFixtureRoster.addEventListener('click', function() {
+        var summary = dataService.loadRosterFromFixture();
+        updateStudentDropdown(summary);
+        showNotice('Loaded offline test fixture (216 students across TE-A, TE-B, TE-C). Labelled strictly as offline test fixture.', 'warning');
+      });
+
+      // -----------------------------------------------------------------------
+      // MEILP Submissions Event Handlers
+      // -----------------------------------------------------------------------
+      // -----------------------------------------------------------------------
+      // MEILP Submissions Event Handlers & Configuration
+      // -----------------------------------------------------------------------
+      function syncConfigUI() {
+        var status = dataService.getConfigurationStatus();
+        var selStorageMode = document.getElementById('selStorageMode');
+        if (configStatusBadge) {
+          if (status.isConfigured) {
+            configStatusBadge.className = 'badge badge-live';
+            configStatusBadge.textContent = 'Config: Ready (' + (status.storageMode || 'session').toUpperCase() + ')';
+          } else {
+            configStatusBadge.className = 'badge badge-offline';
+            configStatusBadge.textContent = 'Admin Setup Required';
+          }
+        }
+        var apiInput = document.getElementById('apiUrl');
+        if (status.isConfigured && status.endpointUrl) {
+          if (apiInput) apiInput.value = status.endpointUrl;
+          if (dataService.configuredAuthKey) {
+            document.getElementById('authKey').value = dataService.configuredAuthKey;
+          }
+          btnRefreshApi.disabled = false;
+        } else {
+          if (apiInput && !apiInput.value) {
+            apiInput.value = status.defaultEndpointUrl || '';
+          }
+        }
+        if (chkAutoConnect) {
+          chkAutoConnect.checked = status.autoConnect === true;
+        }
+        if (selStorageMode && status.storageMode && status.storageMode !== 'none') {
+          selStorageMode.value = status.storageMode;
+        }
+        if (adminConfigStatusText) {
+          if (status.isConfigured) {
+            adminConfigStatusText.innerHTML = '<span style="color: #15803d; font-weight: 600;">✓ Configured [' +
+              (status.storageMode || 'session').toUpperCase() + ']:</span> ' +
+              (status.endpointUrl || '') + ' | Key: ' + (status.authKeyMasked || '••••••••') +
+              (status.autoConnect ? ' (Auto-connect ON)' : '');
+          } else {
+            adminConfigStatusText.innerHTML = '<span style="color: #b91c1c; font-weight: 600;">⚠️ Not Configured:</span> Faculty key required for full staff directory. Default endpoint: ' + (status.defaultEndpointUrl || 'Configured');
+          }
+        }
+      }
+
+      // Remote API Connect Button
+      btnConnectApi.addEventListener('click', function() {
+        var url = document.getElementById('apiUrl').value.trim();
+        var key = document.getElementById('authKey').value.trim();
+        var autoConnect = chkAutoConnect ? chkAutoConnect.checked : false;
+        var selStorageMode = document.getElementById('selStorageMode');
+        var storageMode = selStorageMode ? selStorageMode.value : 'session';
+
+        var urlCheck = dataService.validateEndpointUrl(url);
+        if (!urlCheck.valid) {
+          showNotice(urlCheck.error, 'danger');
+          return;
+        }
+        if (!key) {
+          showNotice('Access key is required to authorize read-only sheet access.', 'danger');
+          return;
+        }
+
+        showNotice('Connecting to read-only Google Apps Script service...', 'info');
+        dataService.fetchFromRemoteAppsScript(url, key, function(err, summary) {
+          if (err) {
+            showNotice('Google Sheets connection failed: ' + err.message + ' (Stale data is NOT marked as current).', 'danger');
+            updateReconciliationStrip();
+          } else {
+            // Save valid configuration with selected workstation storage mode
+            dataService.saveConfiguration(url, key, { autoConnect: autoConnect, storageMode: storageMode });
+            syncConfigUI();
+
+            updateStudentDropdown(summary);
+            showNotice('Successfully connected to Google Sheets! Retrieved ' + dataService.rawSubmissions.length + ' submission records.', 'success');
+            var activeStudent = summary.find(function(s) { return s.hasSubmissions; }) || summary[0];
+            if (activeStudent) {
+              studentSelect.value = activeStudent.id || activeStudent.rollNumber;
+              studentSelect.dispatchEvent(new Event('change'));
+            }
+          }
+        });
+      });
+
+      // Administrator Setup Panel Handlers
+      if (btnToggleAdminSetup) {
+        btnToggleAdminSetup.addEventListener('click', function() {
+          var isHidden = adminSetupPanel.style.display === 'none';
+          adminSetupPanel.style.display = isHidden ? 'block' : 'none';
+        });
+      }
+
+      if (btnSaveConfig) {
+        btnSaveConfig.addEventListener('click', function() {
+          var url = document.getElementById('apiUrl').value.trim();
+          var key = document.getElementById('authKey').value.trim();
+          var selStorageMode = document.getElementById('selStorageMode');
+          var storageMode = selStorageMode ? selStorageMode.value : 'session';
+          try {
+            dataService.saveConfiguration(url, key, {
+              autoConnect: chkAutoConnect ? chkAutoConnect.checked : false,
+              storageMode: storageMode
+            });
+            syncConfigUI();
+            showNotice('Administrator configuration saved (' + storageMode.toUpperCase() + '). URL and credentials stored.', 'success');
+          } catch (e) {
+            showNotice('Cannot save configuration: ' + e.message, 'danger');
+          }
+        });
+      }
+
+      if (btnTestConfig) {
+        btnTestConfig.addEventListener('click', function() {
+          var url = document.getElementById('apiUrl').value.trim();
+          var key = document.getElementById('authKey').value.trim();
+          showNotice('Testing connection to Apps Script endpoint...', 'info');
+          dataService.testConnection(url, key, function(err, res) {
+            if (err) {
+              showNotice('Connection test failed: ' + err.message, 'danger');
+            } else {
+              showNotice('Connection successful! Service: ' + res.service + ' (v' + res.version + ', readOnly: ' + res.readOnly + ')', 'success');
+            }
+          });
+        });
+      }
+
+      if (btnClearConfig) {
+        btnClearConfig.addEventListener('click', function() {
+          dataService.clearConfiguration();
+          document.getElementById('apiUrl').value = (dataService.defaultEndpoint || '');
+          document.getElementById('authKey').value = '';
+          var selStorageMode = document.getElementById('selStorageMode');
+          if (selStorageMode) selStorageMode.value = 'session';
+          syncConfigUI();
+          showNotice('Saved configuration cleared. Reset to default service endpoint.', 'warning');
+        });
+      }
+
+      // Remote API Refresh Data Button
+      btnRefreshApi.addEventListener('click', function() {
+        showNotice('Refreshing current records from Google Sheets...', 'info');
+        dataService.refreshData(function(err, summary) {
+          if (err) {
+            showNotice('Data refresh failed: ' + err.message + ' (Stale data is NOT marked as current).', 'danger');
+            updateReconciliationStrip();
+          } else {
+            updateStudentDropdown(summary);
+            showNotice('Live data refreshed successfully! Retrieved ' + dataService.rawSubmissions.length + ' submission records.', 'success');
+            if (studentSelect.value) {
+              studentSelect.dispatchEvent(new Event('change'));
+            }
+          }
+        });
+      });
+
+      // Local File Input (CSV / JSON)
+      document.getElementById('fileInput').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        showNotice('Reading and parsing file "' + file.name + '" (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB)...', 'info');
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            var fileContent = evt.target.result;
+            var result = dataService.parseFile(fileContent, file.name);
+            dataService.submissionsSource = 'OFFLINE_FILE';
+            dataService.isSubmissionsLive = false;
+            updateStudentDropdown(result.students);
+
+            var msg = 'Successfully loaded ' + result.recordCount + ' records from ' + file.name + ' (' + result.format.toUpperCase() + ').';
+            if (result.warnings && result.warnings.length > 0) {
+              msg += ' (' + result.warnings.length + ' payload warning(s) handled).';
+            }
+            showNotice(msg, 'success');
+
+            var activeStudentFile = result.students.find(function(s) { return s.hasSubmissions; }) || result.students[0];
+            if (activeStudentFile) {
+              studentSelect.value = activeStudentFile.id || activeStudentFile.rollNumber;
+              studentSelect.dispatchEvent(new Event('change'));
+            }
+          } catch (err) {
+            showNotice('Failed to import file: ' + err.message, 'danger');
+          }
+        };
+        reader.onerror = function() {
+          showNotice('Error reading file from disk.', 'danger');
+        };
+        reader.readAsText(file);
+      });
+
+      // Demo Data Button
+      document.getElementById('btnLoadDemo').addEventListener('click', function() {
+        fetch('sample-data/demo_student_submissions.json')
+          .then(function(res) {
+            if (!res.ok) throw new Error('Could not load demo data file: HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function(data) {
+            dataService.submissionsSource = 'VERIFIED_DEMO';
+            dataService.isSubmissionsLive = false;
+            var summary = dataService.loadSubmissionsArray(data);
+            updateStudentDropdown(summary);
+            var activeStudent = summary.find(function(s) { return s.hasSubmissions; }) || summary[0];
+            if (activeStudent) {
+              studentSelect.value = activeStudent.id || activeStudent.rollNumber;
+              studentSelect.dispatchEvent(new Event('change'));
+            }
+          })
+          .catch(function(err) {
+            showNotice('Error loading sample data: ' + err.message, 'danger');
+          });
+      });
+
+      // -----------------------------------------------------------------------
+      // Audit Inspector Modal / Panel
+      // -----------------------------------------------------------------------
+      document.getElementById('boxReviewRequired').addEventListener('click', function() {
+        var report = dataService.getReconciliationReport();
+        auditInspectorTitle.textContent = 'Review Required: ' + (report.conflictingRecords + report.ambiguousRecords + report.unmatchedRecords) + ' Records';
+
+        var html = '';
+        if (report.conflictingSubmissions.length > 0) {
+          html += '<h5 style="color: #b91c1c; margin: 10px 0 6px;">Conflicting Roll Numbers (' + report.conflictingSubmissions.length + ')</h5>';
+          html += '<table class="audit-table"><thead><tr><th>Submitted Roll</th><th>Submitted Name</th><th>Challenge</th><th>Conflict Reason</th></tr></thead><tbody>';
+          report.conflictingSubmissions.forEach(function(c) {
+            html += '<tr><td><code>' + (c.rawRecord.rollNumber || '—') + '</code></td><td>' + (c.rawRecord.studentName || '—') + '</td><td>' + (c.rawRecord.challengeId || '—') + '</td><td style="color: #b91c1c;">' + c.reason + '</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+
+        if (report.ambiguousSubmissions.length > 0) {
+          html += '<h5 style="color: #d97706; margin: 14px 0 6px;">Ambiguous Candidate Matches (' + report.ambiguousSubmissions.length + ')</h5>';
+          html += '<table class="audit-table"><thead><tr><th>Submitted Roll</th><th>Submitted Name</th><th>Challenge</th><th>Review Reason</th><th>Candidates</th></tr></thead><tbody>';
+          report.ambiguousSubmissions.forEach(function(a) {
+            var cNames = (a.candidates || []).map(function(cand) { return cand.studentName; }).join(' vs ');
+            html += '<tr><td><code>' + (a.rawRecord.rollNumber || '—') + '</code></td><td>' + (a.rawRecord.studentName || '—') + '</td><td>' + (a.rawRecord.challengeId || '—') + '</td><td>' + a.reason + '</td><td><strong>' + cNames + '</strong></td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+
+        if (report.unmatchedSubmissions.length > 0) {
+          html += '<h5 style="color: #64748b; margin: 14px 0 6px;">Unmatched Records (' + report.unmatchedSubmissions.length + ')</h5>';
+          html += '<table class="audit-table"><thead><tr><th>Roll</th><th>Name</th><th>Division</th><th>Challenge</th><th>Reason</th></tr></thead><tbody>';
+          report.unmatchedSubmissions.forEach(function(u) {
+            html += '<tr><td><code>' + (u.rawRecord.rollNumber || '—') + '</code></td><td>' + (u.rawRecord.studentName || '—') + '</td><td>' + (u.rawRecord.division || '—') + '</td><td>' + (u.rawRecord.challengeId || '—') + '</td><td>' + u.reason + '</td></tr>';
+          });
+          html += '</tbody></table>';
+        }
+
+        if (!html) {
+          html = '<p class="text-muted" style="padding: 12px 0;">No records requiring review. All records successfully reconciled against the official roster.</p>';
+        }
+
+        auditInspectorContent.innerHTML = html;
+        auditInspectorPanel.style.display = 'block';
+      });
+
+      document.getElementById('boxZeroSubmissions').addEventListener('click', function() {
+        var zeros = dataService.getZeroSubmissionStudents();
+        auditInspectorTitle.textContent = 'Students with Zero Submissions (' + zeros.length + ' Students)';
+
+        if (zeros.length === 0) {
+          auditInspectorContent.innerHTML = '<p class="text-muted" style="padding: 12px 0;">All official roster students have at least one submission record.</p>';
+        } else {
+          var html = '<p class="text-muted" style="margin-bottom: 8px;">These students receive a full report package with 22 clearly labelled "NOT SUBMITTED" deficit slots.</p>';
+          html += '<table class="audit-table"><thead><tr><th>Division</th><th>Roll Number</th><th>Official Student Name</th><th>Action</th></tr></thead><tbody>';
+          zeros.forEach(function(z) {
+            html += '<tr><td><span class="badge badge-offline">' + z.division + '</span></td><td><code>' + z.rollNumber + '</code></td><td><strong>' + z.studentName + '</strong></td><td><button type="button" class="btn-secondary btn-select-zero" data-id="' + z.id + '" style="padding: 2px 8px; font-size: 11px;">Select &amp; View Portfolio</button></td></tr>';
+          });
+          html += '</tbody></table>';
+          auditInspectorContent.innerHTML = html;
+
+          document.querySelectorAll('.btn-select-zero').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var sId = btn.getAttribute('data-id');
+              studentSelect.value = sId;
+              studentSelect.dispatchEvent(new Event('change'));
+              auditInspectorPanel.style.display = 'none';
+            });
+          });
+        }
+        auditInspectorPanel.style.display = 'block';
+      });
+
+      btnCloseAuditInspector.addEventListener('click', function() {
+        auditInspectorPanel.style.display = 'none';
+      });
+
+      // -----------------------------------------------------------------------
+      // Print Triggers
+      // -----------------------------------------------------------------------
+      btnPrintPackage.addEventListener('click', function() {
+        if (!currentPackage) {
+          showNotice('Please select a student and generate the report before printing.', 'warning');
+          return;
+        }
+        if (viewMode.value !== 'full') {
+          viewMode.value = 'full';
+          viewMode.dispatchEvent(new Event('change'));
+        }
+        setTimeout(function() { window.print(); }, 150);
+      });
+
+      btnPrintCurrent.addEventListener('click', function() {
+        if (!currentPackage) {
+          showNotice('Please select a student and generate the report before printing.', 'warning');
+          return;
+        }
+        window.print();
+      });
+
+      // -----------------------------------------------------------------------
+      // Student Portal Actions: Division & Name Selection Workflow
+      // -----------------------------------------------------------------------
+      function populateStudentNames(division) {
+        if (!studentNameSelect) return;
+        studentNameSelect.innerHTML = '';
+
+        if (!division) {
+          studentNameSelect.innerHTML = '<option value="">-- Select Division First --</option>';
+          studentNameSelect.disabled = true;
+          if (btnGenerateStudentPortfolio) btnGenerateStudentPortfolio.disabled = true;
+          return;
+        }
+
+        var rosterStudents = dataService.getDropdownStudentsByDivision ? dataService.getDropdownStudentsByDivision(division) : dataService.getRosterByDivision(division, true);
+        if (!rosterStudents || rosterStudents.length === 0) {
+          studentNameSelect.innerHTML = '<option value="">-- No students found for ' + division + ' --</option>';
+          studentNameSelect.disabled = true;
+          if (btnGenerateStudentPortfolio) btnGenerateStudentPortfolio.disabled = true;
+          return;
+        }
+
+        var defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '-- Choose Your Name (' + rosterStudents.length + ' students) --';
+        studentNameSelect.appendChild(defaultOpt);
+
+        rosterStudents.forEach(function(st) {
+          var opt = document.createElement('option');
+          opt.value = st.id;
+          opt.textContent = '[' + (st.rollNumber || 'Not Available') + '] ' + st.studentName + (division === 'UNLISTED' ? ' • Division: ' + (st.division || 'Not Available') + ' • Assignments: ' + (st.submissionCount == null ? 'Not Available' : st.submissionCount) + (st.retrievalAvailable === false ? ' • Identity review required' : ' • Attendance match unconfirmed') : (st.hasSubmissions ? ' ✓' : ''));
+          studentNameSelect.appendChild(opt);
+        });
+
+        studentNameSelect.disabled = false;
+        if (btnGenerateStudentPortfolio) btnGenerateStudentPortfolio.disabled = true;
+      }
+
+      if (studentDivisionSelect) {
+        studentDivisionSelect.addEventListener('change', function() {
+          portfolioRequest++;
+          var div = studentDivisionSelect.value;
+          currentPackage = null;
+          reportOutput.innerHTML = '';
+          dataService.portfolioRequestSerial = (dataService.portfolioRequestSerial || 0) + 1;
+          dataService.activeUserRole = null;
+          dataService.authenticatedStudent = null;
+          populateStudentNames(div);
+          if (div === 'UNLISTED') {
+            showNotice('Loading Unlisted Students. Attendance identities are unconfirmed.', 'info');
+            dataService.discoverUnlistedStudents(function (err) {
+              if (studentDivisionSelect.value !== 'UNLISTED') return;
+              populateStudentNames('UNLISTED');
+              if (err) showNotice(err.message + ' Locally loaded submissions remain available in offline mode.', 'warning');
+              else showNotice('Unlisted Students loaded. Select a name to retrieve its submissions.', 'info');
+            });
+          }
+          if (studentStatsStrip) studentStatsStrip.style.display = 'none';
+        });
+      }
+
+      if (studentNameSelect) {
+        studentNameSelect.addEventListener('change', function() {
+          portfolioRequest++;
+          currentPackage = null;
+          reportOutput.innerHTML = '';
+          var selId = studentNameSelect.value;
+          if (btnGenerateStudentPortfolio) {
+            btnGenerateStudentPortfolio.disabled = !selId;
+          }
+          if (selId) {
+            generateStudentPortfolio();
+          }
+        });
+      }
+
+      var portfolioRequest = 0;
+      function generateStudentPortfolio() {
+        var requestNumber = ++portfolioRequest;
+        var studentId = studentNameSelect.value;
+        if (!studentId) {
+          showNotice('Please select your name from the dropdown to generate your portfolio.', 'warning');
+          return;
+        }
+
+        currentPackage = null;
+        reportOutput.innerHTML = '';
+        showNotice('Generating portfolio for selected student...', 'info');
+
+        dataService.fetchStudentPortfolio(studentId, function(err, pkg, student) {
+          if (requestNumber !== portfolioRequest || studentNameSelect.value !== studentId) return;
+          if (err) {
+            showNotice(err.message, 'danger');
+            return;
+          }
+
+          currentPackage = pkg;
+
+          if (studentStatsStrip) {
+            studentStatName.textContent = student.studentName;
+            studentStatRollDiv.textContent = 'Roll: ' + student.rollNumber + ' • Division: ' + student.division;
+            studentStatCompleted.textContent = pkg.submittedCount + ' / 22';
+            studentStatMissing.textContent = pkg.missingCount;
+            studentStatLate.textContent = pkg.lateCount;
+            studentStatsStrip.style.display = 'flex';
+          }
+
+          if (btnPrintPackage) {
+            btnPrintPackage.textContent = '🖨️ Print Full Portfolio (' + pkg.totalPages + ' Pages)';
+          }
+
+          renderActiveView();
+          showNotice('Generated ' + (student.isOfficialRoster === false ? 'unlisted student portfolio — attendance match unconfirmed (' : 'official portfolio (') + pkg.totalPages + ' pages) for ' + student.studentName + ' (Roll: ' + student.rollNumber + ', Div: ' + student.division + '). Ready for physical A4 printing or PDF export.', 'success');
+        });
+      }
+
+      if (btnGenerateStudentPortfolio) {
+        btnGenerateStudentPortfolio.addEventListener('click', generateStudentPortfolio);
+      }
+
+      if (btnResetStudentSelection) {
+        btnResetStudentSelection.addEventListener('click', function() {
+          portfolioRequest++;
+          if (studentDivisionSelect) studentDivisionSelect.value = '';
+          populateStudentNames('');
+          if (studentStatsStrip) studentStatsStrip.style.display = 'none';
+          currentPackage = null;
+          dataService.signOutStudent();
+          if (btnPrintPackage) {
+            btnPrintPackage.textContent = '🖨️ Print Full Portfolio';
+          }
+          reportOutput.innerHTML = '<div class="report-page" style="text-align: center; justify-content: center; color: #475569; padding: 40px 20px;"><h3 style="margin-bottom: 8px; color: #0b2e59;">Design Engineering Studio • Student Assignment Report</h3><p style="max-width: 520px; margin: 0 auto; line-height: 1.5; color: #64748b;">Please select your division and name from the dropdown above to generate and print your official assignment portfolio.</p></div>';
+          showNotice('Selection cleared. Please select your division and name.', 'info');
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // Dual-Mode UI Navigation (Student Portal vs Faculty Workspace)
+      // -----------------------------------------------------------------------
+      function setAppMode(mode) {
+        currentAppMode = mode;
+        if (mode === 'FACULTY') {
+          studentPortalSection.style.display = 'none';
+          facultyWorkspaceSection.style.display = 'block';
+          portalModeBadge.textContent = '⚙️ Faculty Administrator Workspace (Staff Controls)';
+          portalModeBadge.className = 'badge badge-offline';
+          facultyStatusIndicator.style.display = 'block';
+          btnToggleFacultyMode.textContent = '🎓 Switch to Student Portal';
+
+          if (isFacultyUnlocked || dataService.configuredAuthKey) {
+            isFacultyUnlocked = true;
+            facultyLockCard.style.display = 'none';
+            facultyControlsContainer.style.display = 'block';
+          } else {
+            facultyLockCard.style.display = 'block';
+            facultyControlsContainer.style.display = 'none';
+          }
+        } else {
+          studentPortalSection.style.display = 'block';
+          facultyWorkspaceSection.style.display = 'none';
+          portalModeBadge.textContent = '🎓 Student Access Portal • Name-Based Portfolio Download';
+          portalModeBadge.className = 'badge badge-fixture';
+          facultyStatusIndicator.style.display = 'none';
+          btnToggleFacultyMode.textContent = '⚙️ Faculty Access';
+          if (currentPackage) {
+            renderActiveView();
+          }
+        }
+      }
+
+      if (btnToggleFacultyMode) {
+        btnToggleFacultyMode.addEventListener('click', function() {
+          setAppMode(currentAppMode === 'STUDENT' ? 'FACULTY' : 'STUDENT');
+        });
+      }
+
+      if (btnCancelFaculty) {
+        btnCancelFaculty.addEventListener('click', function() {
+          setAppMode('STUDENT');
+        });
+      }
+
+      if (btnExitFaculty) {
+        btnExitFaculty.addEventListener('click', function() {
+          setAppMode('STUDENT');
+        });
+      }
+
+      if (btnUnlockFaculty) {
+        btnUnlockFaculty.addEventListener('click', function() {
+          var key = (facultyMasterKeyInput.value || '').trim();
+          if (!key) {
+            showNotice('Please enter the report service access key to unlock faculty controls.', 'warning');
+            return;
+          }
+          isFacultyUnlocked = true;
+          document.getElementById('authKey').value = key;
+          facultyLockCard.style.display = 'none';
+          facultyControlsContainer.style.display = 'block';
+          showNotice('Faculty mode unlocked. Roster and administrative tools enabled.', 'success');
+        });
+      }
+
+      // Initialize UI with offline fixture roster and configuration check
+      updateRosterStatus();
+      updateReconciliationStrip();
+
+      var loadedConfig = dataService.loadConfiguration();
+      if (!dataService.configuredEndpoint) {
+        dataService.configuredEndpoint = DataService.DEFAULT_SERVICE_URL;
+      }
+      syncConfigUI();
+
+      if (loadedConfig.isConfigured && loadedConfig.autoConnect) {
+        // Auto-connect to live service in faculty mode if configured
+        btnConnectApi.click();
+      }
+
+    })();
+  </script>
+</body>
+</html>
